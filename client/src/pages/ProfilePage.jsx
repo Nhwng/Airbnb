@@ -6,7 +6,7 @@ import AccountNav from '@/components/ui/AccountNav';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 
-import PlacesPage from './PlacesPage';
+import PlacesPage from './ListingsPage';
 import { useAuth } from '../../hooks';
 import { LogOut, Mail, PenSquare, Text } from 'lucide-react';
 import EditProfileDialog from '@/components/ui/EditProfileDialog';

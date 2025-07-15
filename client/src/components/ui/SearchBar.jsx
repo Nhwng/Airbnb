@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 
 import axiosInstance from '@/utils/axios';
-import { usePlaces } from '../../../hooks';
+import { useListings } from '../../../hooks';  // Cập nhật từ usePlaces thành useListings
 
 const SearchBar = () => {
-  const Places = usePlaces();
-  const { setPlaces, setLoading } = Places;
+  const { listings, setListings, setLoading } = useListings();  // Cập nhật từ Places thành Listings
 
   const [searchText, setSearchText] = useState('');
   const [searchTimeout, setSearchTimeout] = useState(null);
@@ -19,9 +18,9 @@ const SearchBar = () => {
       setSearchTimeout(
         setTimeout(async () => {
           const { data } = await axiosInstance.get(
-            `/places/search/${searchText.trimStart()}`,
+            `/listings/search/${searchText.trimStart()}`,  // Cập nhật endpoint từ /places/search thành /listings/search
           );
-          setPlaces(data);
+          setListings(data);  // Cập nhật từ setPlaces thành setListings
           setLoading(false);
         }, 500),
       );
