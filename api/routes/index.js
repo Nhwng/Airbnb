@@ -4,7 +4,7 @@ const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 
 // multer
-const  upload = multer({ dest: '/tmp' });
+const upload = multer({ dest: '/tmp' });
 
 router.get('/', (req, res) => {
   res.status(200).json({
@@ -12,49 +12,52 @@ router.get('/', (req, res) => {
   });
 });
 
-// upload photo using image url
+// Upload photo using image URL
 router.post('/upload-by-link', async (req, res) => {
   try {
     const { link } = req.body;
-    let result = await cloudinary.uploader.upload(link, {
-      folder: 'Airbnb/Places',
+    const result = await cloudinary.uploader.upload(link, {
+      folder: 'Airbnb/Listings',
     });
     res.json(result.secure_url);
   } catch (error) {
-    console.log(error);
+    console.error('Upload error:', error);
     res.status(500).json({
       message: 'Internal server error',
+      error: error.message,
     });
   }
 });
 
-// upload images from local device
+// Upload images from local device
 router.post('/upload', upload.array('photos', 100), async (req, res) => {
   try {
-    let imageArray = [];
+    const imageArray = [];
 
     for (let index = 0; index < req.files.length; index++) {
-      let { path } = req.files[index];
-      let result = await cloudinary.uploader.upload(path, {
-        folder: 'Airbnb/Places',
+      const { path } = req.files[index];
+      const result = await cloudinary.uploader.upload(path, {
+        folder: 'Airbnb/Listings',
       });
       imageArray.push(result.secure_url);
     }
 
     res.status(200).json(imageArray);
   } catch (error) {
-    console.log('Error: ', error);
+    console.error('Upload error:', error);
     res.status(500).json({
-      error,
       message: 'Internal server error',
+      error: error.message,
     });
   }
 });
 
-
 router.use('/user', require('./user'));
-router.use('/places', require('./place'));
-router.use('/bookings', require('./booking'));
-
+router.use('/listings', require('./listing'));
+router.use('/reservations', require('./reservation'));
+router.use('/images', require('./image'));
+router.use('/reviews', require('./review'));
+router.use('/amenities', require('./amenity'));
+router.use('/availabilities', require('./availability'));
 
 module.exports = router;
