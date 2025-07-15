@@ -10,6 +10,5 @@ const {
 
 router.route('/:listing_id').get(getReviews);
 router.route('/').post(isLoggedIn, addReview);
-router.route('/response').put(isLoggedIn, respondToReview);
 
 module.exports = router;

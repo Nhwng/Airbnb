@@ -47,37 +47,3 @@ exports.getReviews = async (req, res) => {
   }
 };
 
-// Respond to a review (only by host)
-exports.respondToReview = async (req, res) => {
-  try {
-    const userData = req.user;
-    const { review_id, response } = req.body;
-
-    const review = await Review.findOne({ review_id });
-    if (!review) {
-      return res.status(404).json({
-        message: 'Review not found',
-      });
-    }
-
-    const listing = await Listing.findOne({ listing_id: review.listing_id });
-    if (listing.host_id !== userData.user_id) {
-      return res.status(403).json({
-        message: 'Unauthorized to respond to this review',
-      });
-    }
-
-    review.response = response;
-    await review.save();
-
-    res.status(200).json({
-      message: 'Response added successfully',
-      review,
-    });
-  } catch (err) {
-    res.status(500).json({
-      message: 'Internal server error',
-      error: err.message,
-    });
-  }
-};

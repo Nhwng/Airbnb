@@ -6,26 +6,26 @@ exports.addListing = async (req, res) => {
     const userData = req.user;
     const {
       title,
-      address,
-      addedPhotos,
       description,
-      perks,
-      extraInfo,
-      maxGuests,
-      price,
+      currency,
+      nightly_price,
+      person_capacity,
+      room_type,
+      latitude,
+      longitude,
     } = req.body;
 
     const listing = await Listing.create({
       host_id: userData.user_id,
       listing_id: Math.floor(100000 + Math.random() * 900000),
       title,
-      address,
-      photos: addedPhotos,
       description,
-      amenities: perks,
-      extra_info: extraInfo,
-      max_guests: maxGuests,
-      price_per_night: price,
+      currency,
+      nightly_price,
+      person_capacity,
+      room_type,
+      latitude,
+      longitude,
     });
 
     res.status(200).json({
@@ -60,13 +60,13 @@ exports.updateListing = async (req, res) => {
     const {
       id,
       title,
-      address,
-      addedPhotos,
       description,
-      perks,
-      extraInfo,
-      maxGuests,
-      price,
+      currency,
+      nightly_price,
+      person_capacity,
+      room_type,
+      latitude,
+      longitude,
     } = req.body;
 
     const listing = await Listing.findOne({ listing_id: id });
@@ -84,13 +84,13 @@ exports.updateListing = async (req, res) => {
 
     listing.set({
       title,
-      address,
-      photos: addedPhotos,
       description,
-      amenities: perks,
-      extra_info: extraInfo,
-      max_guests: maxGuests,
-      price_per_night: price,
+      currency,
+      nightly_price,
+      person_capacity,
+      room_type,
+      latitude,
+      longitude,
     });
 
     await listing.save();
@@ -145,7 +145,7 @@ exports.searchListings = async (req, res) => {
     if (!key) {
       searchMatches = await Listing.find();
     } else {
-      searchMatches = await Listing.find({ address: { $regex: key, $options: 'i' } });
+      searchMatches = await Listing.find({ title: { $regex: key, $options: 'i' } });
     }
     res.status(200).json(searchMatches);
   } catch (err) {

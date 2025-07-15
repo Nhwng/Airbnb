@@ -1,43 +1,18 @@
 const mongoose = require('mongoose');
 
 const listingSchema = new mongoose.Schema({
-  listing_id: {
-    type: Number,
-    required: true,
-    unique: true,
-  },
-  host_id: {
-    type: Number,
-    ref: 'User',
-    required: true,
-  },
-  title: {
-    type: String,
-    required: true,
-  },
-  address: {
-    type: String,
-    required: true,
-  },
-  photos: {
-    type: [String],
-  },
-  description: {
-    type: String,
-  },
-  amenities: {
-    type: [String],
-  },
-  extra_info: {
-    type: String,
-  },
-  max_guests: {
-    type: Number,
-  },
-  price_per_night: {
-    type: Number,
-  },
-}, { timestamps: true });
+  listing_id: { type: Number, required: true, unique: true },
+  created_at: { type: Date, default: Date.now },
+  currency: { type: String, required: true },
+  description: { type: String, required: true },
+  host_id: { type: Number, required: true },
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  nightly_price: { type: Number, required: true },
+  person_capacity: { type: Number, required: true },
+  room_type: { type: String, required: true },
+  title: { type: String, required: true },
+});
 
 const Listing = mongoose.model('Listing', listingSchema);
 

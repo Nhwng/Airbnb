@@ -40,7 +40,7 @@ exports.createReservation = async (req, res) => {
     }
 
     // Calculate total price
-    const totalPrice = availabilities.reduce((sum, avail) => sum + (avail.price || listing.price_per_night), 0);
+    const totalPrice = availabilities.reduce((sum, avail) => sum + (avail.price || listing.nightly_price), 0);
 
     // Update availability to mark as reserved
     await Availability.updateMany(
@@ -82,7 +82,6 @@ exports.getReservations = async (req, res) => {
     // Since there's no Booking model, we can't directly query reservations.
     // Instead, we could track reservations by checking Availability updates or logs,
     // but for simplicity, we'll return a placeholder response.
-    // In a real app, you might need a separate collection or log to track reservations.
     res.status(200).json({
       message: 'Reservations not directly stored. Please implement a Booking model for full functionality.',
       success: true,
