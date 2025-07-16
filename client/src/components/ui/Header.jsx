@@ -81,8 +81,8 @@ export const Header = () => {
           <div className="z-10 h-[35px] w-[35px] overflow-hidden rounded-full">
             {user ? (
               <Avatar>
-                {user?.picture ? (
-                  <AvatarImage src={user.picture} className="h-full w-full" />
+                {user?.picture_url ? (
+                  <AvatarImage src={user.picture_url} className="h-full w-full" />
                 ) : (
                   <AvatarImage
                     src="https://res.cloudinary.com/rahul4019/image/upload/v1695133265/pngwing.com_zi4cre.png"

@@ -21,7 +21,8 @@ const EditProfileDialog = () => {
   const [picture, setPicture] = useState('');
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState({
-    name: user.name,
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
     password: '',
     confirm_password: '',
   });
@@ -42,36 +43,46 @@ const EditProfileDialog = () => {
 
   const handleSaveChanges = async () => {
     setLoading(true);
-    const { name, password, confirm_password } = userData;
+    const { first_name, last_name, password, confirm_password } = userData;
 
     // Validation
-    if (name.trim() === '') {
+    if (first_name.trim() === '') {
       setLoading(false);
-      return toast.error("Name Can't be empty");
+      toast.error("First name can't be empty");
+      return;
     } else if (password !== confirm_password) {
       setLoading(false);
-      return toast.error("Passwords don't match");
+      toast.error("Passwords don't match");
+      return;
     }
 
     try {
-      // first check if picture has been updated or not
-      let pictureUrl = '';
+      let picture_url = user.picture_url || '';
       if (picture) {
-        // upload picture and save the image url
-        pictureUrl = await uploadPicture(picture);
+        // upload picture and get url
+        const res = await uploadPicture(picture);
+        if (res && res.success && res.picture_url) {
+          picture_url = res.picture_url;
+        } else {
+          setLoading(false);
+          toast.error(res && res.message ? res.message : 'Upload picture failed!');
+          return;
+        }
       }
 
       const userDetails = {
-        name: userData.name,
-        password: userData.password,
-        picture: pictureUrl,
+        first_name,
+        last_name,
+        password,
+        picture_url,
       };
 
       const res = await updateUser(userDetails);
-      if (res.success) {
+      if (res && res.success && res.user) {
         setUser(res.user);
-        setLoading(false);
-        return toast.success('Updated successfully!');
+        toast.success('Updated successfully!');
+      } else {
+        toast.error(res && res.message ? res.message : 'Update failed!');
       }
       setLoading(false);
     } catch (error) {
@@ -121,13 +132,25 @@ const EditProfileDialog = () => {
         {/* Update form */}
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
+            <Label htmlFor="first_name" className="text-right">
+              First Name
             </Label>
             <Input
-              id="name"
-              name="name"
-              value={userData.name}
+              id="first_name"
+              name="first_name"
+              value={userData.first_name}
+              className="col-span-3"
+              onChange={handleUserData}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="last_name" className="text-right">
+              Last Name
+            </Label>
+            <Input
+              id="last_name"
+              name="last_name"
+              value={userData.last_name}
               className="col-span-3"
               onChange={handleUserData}
             />

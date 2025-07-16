@@ -8,9 +8,11 @@ import { useAuth } from '../../hooks';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
+    role: 'guest', // hoặc 'host' nếu cần
   });
   const [redirect, setRedirect] = useState(false);
   const auth = useAuth();
@@ -52,10 +54,17 @@ const RegisterPage = () => {
         <h1 className="mb-4 text-center text-4xl">Register</h1>
         <form className="mx-auto max-w-md" onSubmit={handleFormSubmit}>
           <input
-            name="name"
+            name="first_name"
             type="text"
-            placeholder="John Doe"
-            value={formData.name}
+            placeholder="First Name"
+            value={formData.first_name}
+            onChange={handleFormData}
+          />
+          <input
+            name="last_name"
+            type="text"
+            placeholder="Last Name"
+            value={formData.last_name}
             onChange={handleFormData}
           />
           <input
@@ -72,6 +81,11 @@ const RegisterPage = () => {
             value={formData.password}
             onChange={handleFormData}
           />
+          {/* Nếu muốn cho chọn role */}
+          {/* <select name="role" value={formData.role} onChange={handleFormData}>
+    <option value="user">User</option>
+    <option value="host">Host</option>
+  </select> */}
           <button className="primary my-2">Register</button>
         </form>
 

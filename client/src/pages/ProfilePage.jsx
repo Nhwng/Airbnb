@@ -47,13 +47,15 @@ const ProfilePage = () => {
           {/* avatar */}
           <div className="flex h-40 w-40 justify-center rounded-full bg-gray-200 p-4  sm:h-72 sm:w-72 md:h-96 md:w-96">
             <Avatar>
-              {user.picture ? (
-                <AvatarImage src={user.picture} />
+              {user.picture_url ? (
+                <AvatarImage src={user.picture_url} />
               ) : (
                 <AvatarImage src="https://res.cloudinary.com/rahul4019/image/upload/v1695133265/pngwing.com_zi4cre.png" className="object-cover"/>
               )}
-
-              <AvatarFallback>{user.name.slice([0], [1])}</AvatarFallback>
+              <AvatarFallback>
+                {user.first_name ? user.first_name[0] : ''}
+                {user.last_name ? user.last_name[0] : ''}
+              </AvatarFallback>
             </Avatar>
           </div>
 
@@ -64,7 +66,9 @@ const ProfilePage = () => {
                 <Text height="18" width="18" />
                 <div className="text-xl">
                   <span>Name: </span>
-                  <span className="text-gray-600">{user.name}</span>
+                  <span className="text-gray-600">
+                    {user.first_name} {user.last_name}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">

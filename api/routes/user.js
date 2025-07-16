@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 
-const upload = multer({ dest: '/tmp' });
+const upload = multer({ dest: './tmp/' });
 
 const {
   register,
@@ -12,11 +12,12 @@ const {
   uploadPicture,
   updateUserDetails,
 } = require('../controllers/userController');
+const { isLoggedIn } = require('../middlewares/user');
 
 router.route('/register').post(register);
 router.route('/login').post(login);
 router.route('/google/login').post(googleLogin);
-router.route('/upload-picture').post(upload.single('picture', 1), uploadPicture);
+router.route('/upload-picture').post(isLoggedIn, upload.single('picture', 1), uploadPicture);
 router.route('/update-user').put(updateUserDetails);
 router.route('/logout').get(logout);
 

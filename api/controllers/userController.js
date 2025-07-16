@@ -6,7 +6,7 @@ const cloudinary = require('cloudinary').v2;
 // Register/SignUp user
 exports.register = async (req, res) => {
   try {
-    const { first_name, last_name, email, password, role } = req.body;
+    const { first_name, last_name, email, password, role, picture_url } = req.body;
 
     if (!first_name || !email || !password || !role) {
       return res.status(400).json({
@@ -28,6 +28,7 @@ exports.register = async (req, res) => {
       email,
       password: await bcrypt.hash(password, 10),
       role,
+      picture_url: picture_url || '',
     });
 
     cookieToken(user, res);
@@ -108,23 +109,46 @@ exports.googleLogin = async (req, res) => {
 // Upload picture
 exports.uploadPicture = async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
     const userData = req.user;
+
     const { path } = req.file;
 
     const result = await cloudinary.uploader.upload(path, {
       folder: 'Airbnb/Users',
     });
+    // Xóa file tạm sau khi upload thành công
+    const fs = require('fs');
+    fs.unlink(path, (err) => {
+      if (err) {
+        console.error('Không thể xóa file tạm:', err);
+      }
+    });
 
     const user = await User.findOne({ user_id: userData.user_id });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
     user.picture_url = result.secure_url;
     await user.save();
 
     res.status(200).json({
+      success: true,
       picture_url: result.secure_url,
     });
   } catch (err) {
     res.status(500).json({
-      message: 'Internal server error',
+      success: false,
+      message: 'Upload failed',
       error: err.message,
     });
   }

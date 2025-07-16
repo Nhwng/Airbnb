@@ -7,7 +7,10 @@ import ProfilePage from './ProfilePage';
 import { useAuth } from '../../hooks';
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [redirect, setRedirect] = useState(false);
   const auth = useAuth();
 

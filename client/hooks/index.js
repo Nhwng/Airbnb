@@ -75,8 +75,10 @@ export const useProvideAuth = () => {
         const decoded = jwt_decode(credential);
         try {
             const { data } = await axiosInstance.post('user/google/login', {
-                name: `${decoded.given_name} ${decoded.family_name}`,
+                first_name: decoded.given_name,
+                last_name: decoded.family_name,
                 email: decoded.email,
+                role: 'guest',
             });
             if (data.user && data.token) {
                 setUser(data.user);
