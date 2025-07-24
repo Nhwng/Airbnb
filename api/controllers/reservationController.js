@@ -1,22 +1,25 @@
 const Availability = require('../models/Availability');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
+const Reservation = require('../models/Reservation');
 
-// Creates a reservation by updating availability
 exports.createReservation = async (req, res) => {
   try {
     const userData = req.user;
-    const { listing_id, checkIn, checkOut, numOfGuests, name, phone } = req.body;
+    const { place, checkIn, checkOut, numOfGuests, name, phone, price } = req.body;
 
-    // Validate listing exists
+    console.log('Received request data:', { place, checkIn, checkOut, numOfGuests, name, phone, price });
+    const listing_id = Number(place);
+    console.log('Converted listing_id:', listing_id, 'Type:', typeof listing_id);
+
     const listing = await Listing.findOne({ listing_id });
     if (!listing) {
+      console.log('Listing not found for listing_id:', listing_id);
       return res.status(404).json({
         message: 'Listing not found',
       });
     }
 
-    // Validate user exists
     const user = await User.findOne({ user_id: userData.user_id });
     if (!user) {
       return res.status(404).json({
@@ -24,44 +27,50 @@ exports.createReservation = async (req, res) => {
       });
     }
 
-    // Check availability for the requested dates
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
+    checkInDate.setUTCHours(0, 0, 0, 0);
+    checkOutDate.setUTCHours(0, 0, 0, 0);
+    console.log('Processed check-in date:', checkInDate, 'Processed check-out date:', checkOutDate);
+
     const availabilities = await Availability.find({
       listing_id,
       date: { $gte: checkInDate, $lte: checkOutDate },
       is_available: true,
     });
+    console.log('Found availabilities:', availabilities.map(a => ({ date: a.date, is_available: a.is_available })));
 
-    if (availabilities.length !== (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24) + 1) {
+    const daysDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)) + 1;
+    console.log('Expected days:', daysDiff, 'Available days:', availabilities.length);
+
+    if (availabilities.length !== daysDiff) {
       return res.status(400).json({
         message: 'Requested dates are not fully available',
       });
     }
 
-    // Calculate total price
-    const totalPrice = availabilities.reduce((sum, avail) => sum + (avail.price || listing.nightly_price), 0);
-
-    // Update availability to mark as reserved
     await Availability.updateMany(
       { listing_id, date: { $gte: checkInDate, $lte: checkOutDate } },
       { $set: { is_available: false } }
     );
 
-    // Note: Since there's no Booking model, we return reservation details without storing a separate booking
-    res.status(200).json({
-      reservation: {
-        listing_id,
-        user_id: userData.user_id,
-        check_in: checkInDate,
-        check_out: checkOutDate,
-        num_of_guests: numOfGuests,
-        name,
-        phone,
-        total_price: totalPrice,
-      },
+    const reservation = await Reservation.create({
+      listing_id,
+      user_id: userData.user_id,
+      check_in: checkInDate,
+      check_out: checkOutDate,
+      num_of_guests: numOfGuests || 1,
+      name,
+      phone,
+      total_price: price,
+    });
+
+    res.status(201).json({
+      message: 'Reservation created successfully',
+      reservation,
     });
   } catch (err) {
+    console.error('Error creating reservation:', err);
     res.status(500).json({
       message: 'Internal server error',
       error: err.message,
@@ -69,7 +78,6 @@ exports.createReservation = async (req, res) => {
   }
 };
 
-// Returns user-specific reservations (based on Availability changes)
 exports.getReservations = async (req, res) => {
   try {
     const userData = req.user;
@@ -79,12 +87,9 @@ exports.getReservations = async (req, res) => {
       });
     }
 
-    // Since there's no Booking model, we can't directly query reservations.
-    // Instead, we could track reservations by checking Availability updates or logs,
-    // but for simplicity, we'll return a placeholder response.
+    const reservations = await Reservation.find({ user_id: userData.user_id }).populate('listing_id');
     res.status(200).json({
-      message: 'Reservations not directly stored. Please implement a Booking model for full functionality.',
-      success: true,
+      reservations,
     });
   } catch (err) {
     res.status(500).json({

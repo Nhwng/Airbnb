@@ -43,8 +43,8 @@ exports.addAvailability = async (req, res) => {
 exports.getAvailability = async (req, res) => {
   try {
     const { listing_id } = req.params;
-    const availability = await Availability.find({ listing_id });
-    res.status(200).json(availability);
+    const availabilities = await Availability.find({ listing_id: Number(listing_id) });
+    res.status(200).json(availabilities);
   } catch (err) {
     res.status(500).json({
       message: 'Internal server error',

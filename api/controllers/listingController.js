@@ -1,5 +1,5 @@
 const Listing = require('../models/Listing');
-
+const axios = require('axios'); // Thêm axios
 // Adds a listing in the DB
 exports.addListing = async (req, res) => {
   try {
@@ -155,3 +155,5 @@ exports.searchListings = async (req, res) => {
     });
   }
 };
+
+

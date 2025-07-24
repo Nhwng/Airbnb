@@ -58,6 +58,6 @@ router.use('/reservations', require('./reservation'));
 router.use('/images', require('./image'));
 router.use('/reviews', require('./review'));
 router.use('/amenities', require('./amenity'));
-router.use('/availabilities', require('./availability'));
+router.use('/availability', require('./availability'));
 
 module.exports = router;

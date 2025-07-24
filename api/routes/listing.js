@@ -21,5 +21,4 @@ router.route('/update').put(isLoggedIn, updateListing);
 // Not protected routes
 router.route('/:id').get(singleListing);
 router.route('/search/:key').get(searchListings);
-
 module.exports = router;

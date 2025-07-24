@@ -14,6 +14,16 @@ const listingSchema = new mongoose.Schema({
   title: { type: String, required: true },
 });
 
+listingSchema.pre('save', function (next) {
+  console.log('Pre-save hook triggered with data:', this.toObject()); // Debug
+  next();
+});
+
+listingSchema.pre('findOneAndUpdate', function (next) {
+  console.log('Pre-findOneAndUpdate hook triggered with data:', this.getUpdate()); // Debug
+  next();
+});
+
 const Listing = mongoose.model('Listing', listingSchema);
 
 module.exports = Listing;

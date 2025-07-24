@@ -25,7 +25,6 @@ const availabilitySchema = new mongoose.Schema({
 
 // Compound index to enforce uniqueness on listing_id and date
 availabilitySchema.index({ listing_id: 1, date: 1 }, { unique: true });
-
-const Availability = mongoose.model('Availability', availabilitySchema);
+const Availability = mongoose.model('Availability', availabilitySchema, 'availability');
 
 module.exports = Availability;

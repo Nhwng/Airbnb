@@ -61,21 +61,6 @@ const ListingPage = () => {
     fetchAmenities();
   }, [id]);
 
-  useEffect(() => {
-    if (!listing?.latitude || !listing?.longitude) return;
-    const fetchAddress = async () => {
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${listing.latitude}&lon=${listing.longitude}`
-        );
-        const data = await res.json();
-        setAddress(data.display_name || '');
-      } catch (e) {
-        setAddress('');
-      }
-    };
-    fetchAddress();
-  }, [listing]);
 
   if (loading) {
     return <Spinner />;
@@ -151,6 +136,7 @@ const ListingPage = () => {
               ...listing,
               maxGuests: listing.person_capacity,
               price: listing.nightly_price,
+              listing_id: listing.listing_id,
             }}
           />
         </div>

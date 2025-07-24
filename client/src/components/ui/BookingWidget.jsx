@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { differenceInDays } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -6,79 +6,84 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../../hooks';
 import axiosInstance from '@/utils/axios';
 import DatePickerWithRange from './DatePickerWithRange';
+import Spinner from '@/components/ui/Spinner';
 
-const BookingWidget = ({ place }) => {
-  const [dateRange, setDateRange] = useState({ from: null, to: null });
-  const [bookingData, setBookingData] = useState({
-    noOfGuests: 1,
-    name: '',
-    phone: '',
-  });
-  const [redirect, setRedirect] = useState('');
+export default function BookingWidget({ place }) {
   const { user } = useAuth();
+  const [dateRange, setDateRange] = useState({ from: null, to: null });
+  const [noOfGuests, setNoOfGuests] = useState(1);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [disabledDates, setDisabledDates] = useState([]);
+  const [redirect, setRedirect] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  const { noOfGuests, name, phone } = bookingData;
-  const { _id: id, price } = place;
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      try {
+        const { data } = await axiosInstance.get(`/availability/${place.listing_id}`);
+        const unavailable = data
+          .filter(d => !d.is_available)
+          .map(d => new Date(d.date).toISOString().split('T')[0]);
+        setDisabledDates(unavailable);
+      } catch (err) {
+        console.error('Error fetching availability:', err);
+      }
+    };
+    if (place.listing_id) {
+      fetchAvailability();
+    }
+  }, [place.listing_id]);
 
   useEffect(() => {
     if (user) {
-      setBookingData({ ...bookingData, name: user.name });
+      setName(`${user.first_name || ''} ${user.last_name || ''}`.trim());
     }
   }, [user]);
 
-  const numberOfNights =
-    dateRange.from && dateRange.to
-      ? differenceInDays(
-          new Date(dateRange.to).setHours(0, 0, 0, 0),
-          new Date(dateRange.from).setHours(0, 0, 0, 0),
-        )
-      : 0;
-
-  // handle booking form
-  const handleBookingData = (e) => {
-    setBookingData({
-      ...bookingData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const { from, to } = dateRange;
+  const numberOfNights = from && to
+    ? differenceInDays(new Date(to), new Date(from))
+    : 0;
 
   const handleBooking = async () => {
-    // User must be signed in to book place
+    if (!from || !to) {
+      toast.error('Please select both check-in and check-out dates!');
+      return;
+    }
+    if (!name || !phone) {
+      toast.error('Please fill in your name and phone number!');
+      return;
+    }
+    if (noOfGuests > place.maxGuests) {
+      toast.error(`Number of guests (${noOfGuests}) exceeds maximum (${place.maxGuests})!`);
+      return;
+    }
     if (!user) {
-      return setRedirect(`/login`);
+      setRedirect('/login');
+      return;
     }
 
-    // BOOKING DATA VALIDATION
-    if (numberOfNights < 1) {
-      return toast.error('Please select valid dates');
-    } else if (noOfGuests < 1) {
-      return toast.error("No. of guests can't be less than 1");
-    } else if (noOfGuests > place.maxGuests) {
-      return toast.error(`Allowed max. no. of guests: ${place.maxGuests}`);
-    } else if (name.trim() === '') {
-      return toast.error("Name can't be empty");
-    } else if (phone.trim() === '') {
-      return toast.error("Phone can't be empty");
-    }
-
+    console.log('Sending dateRange to backend:', { from, to }); // Debug
+    setLoading(true);
     try {
-      const response = await axiosInstance.post('/bookings', {
-        checkIn: dateRange.from,
-        checkOut: dateRange.to,
+      const res = await axiosInstance.post('/reservations', {
+        checkIn: from,
+        checkOut: to,
         noOfGuests,
         name,
         phone,
-        place: id,
-        price: numberOfNights * price,
+        place: place.listing_id,
+        price: numberOfNights * place.price,
       });
-
-      const bookingId = response.data.booking._id;
-
-      setRedirect(`/account/bookings/${bookingId}`);
+      setRedirect(`/account/bookings/${res.data.reservation._id}`);
       toast('Congratulations! Enjoy your trip.');
-    } catch (error) {
+    } catch (err) {
+      console.error('Booking error:', err);
       toast.error('Something went wrong!');
-      console.log('Error: ', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,49 +92,85 @@ const BookingWidget = ({ place }) => {
   }
 
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-xl">
-      <div className="text-center text-xl">
-        Price: <span className="font-semibold">₹{place.price}</span> / per night
+    <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 relative">
+      <div className="text-xl text-center text-gray-700 font-medium">
+        ${place.price} / night
       </div>
-      <div className="mt-4 rounded-2xl border">
-        <div className="flex w-full ">
-          <DatePickerWithRange setDateRange={setDateRange} />
+
+      {loading ? (
+        <div className="flex justify-center my-4">
+          <Spinner />
         </div>
-        <div className="border-t py-3 px-4">
-          <label>Number of guests: </label>
-          <input
-            type="number"
-            name="noOfGuests"
-            placeholder={`Max. guests: ${place.maxGuests}`}
-            min={1}
-            max={place.maxGuests}
-            value={noOfGuests}
-            onChange={handleBookingData}
-          />
-        </div>
-        <div className="border-t py-3 px-4">
-          <label>Your full name: </label>
-          <input
-            type="text"
-            name="name"
-            value={name}
-            onChange={handleBookingData}
-          />
-          <label>Phone number: </label>
-          <input
-            type="tel"
-            name="phone"
-            value={phone}
-            onChange={handleBookingData}
-          />
-        </div>
-      </div>
-      <button onClick={handleBooking} className="primary mt-4">
-        Book this place
-        {numberOfNights > 0 && <span> ₹{numberOfNights * place.price}</span>}
-      </button>
+      ) : (
+        <>
+          <div className="mt-4 rounded-lg border">
+            <div
+              className="flex w-full cursor-pointer"
+              onClick={() => setShowCalendar(v => !v)}
+            >
+              <div className="flex-1 p-2 border-r text-center">
+                {from ? new Date(from).toLocaleDateString() : 'Check-in'}
+              </div>
+              <div className="flex-1 p-2 text-center">
+                {to ? new Date(to).toLocaleDateString() : 'Check-out'}
+              </div>
+            </div>
+
+            {showCalendar && (
+              <div className="absolute z-20 mt-2 bg-white p-4 rounded-lg shadow-lg">
+                <DatePickerWithRange
+                  setDateRange={setDateRange}
+                  disabledDates={disabledDates}
+                />
+                <button
+                  onClick={() => setShowCalendar(false)}
+                  className="mt-2 w-full bg-muted text-muted-foreground p-2 rounded-md hover:bg-muted/90"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t py-3 px-4">
+            <label className="block mb-1">Number of guests:</label>
+            <input
+              type="number"
+              min={1}
+              max={place.maxGuests}
+              value={noOfGuests}
+              onChange={e => setNoOfGuests(Math.max(1, Math.min(place.maxGuests, Number(e.target.value) || 1)))}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          <div className="border-t py-3 px-4">
+            <label className="block mb-1">Your full name:</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <label className="block mb-1">Phone number:</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          <button
+            onClick={handleBooking}
+            className="w-full mt-4 bg-primary text-primary-foreground p-2 rounded-md hover:bg-primary/90 disabled:bg-primary/50"
+            disabled={!from || !to}
+          >
+            Book this place
+            {numberOfNights > 0 && ` $${numberOfNights * place.price}`}
+          </button>
+        </>
+      )}
     </div>
   );
-};
-
-export default BookingWidget;
+}
