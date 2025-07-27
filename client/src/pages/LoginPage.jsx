@@ -6,6 +6,8 @@ import { GoogleLogin } from '@react-oauth/google';
 import ProfilePage from './ProfilePage';
 import { useAuth } from '../../hooks';
 
+import axios from '../utils/axios';
+
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -13,6 +15,10 @@ const LoginPage = () => {
   });
   const [redirect, setRedirect] = useState(false);
   const auth = useAuth();
+
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const handleFormData = (e) => {
     const { name, value } = e.target;
@@ -69,6 +75,11 @@ const LoginPage = () => {
             onChange={handleFormData}
           />
           <button className="primary my-4">Login</button>
+          <div className="text-right">
+            <button type="button" className="text-blue-600 text-sm underline hover:text-blue-800" onClick={() => setShowForgot(true)}>
+              Quên mật khẩu?
+            </button>
+          </div>
         </form>
 
         <div className="mb-4 flex w-full items-center gap-4">
@@ -97,6 +108,43 @@ const LoginPage = () => {
             Register now
           </Link>
         </div>
+
+        {/* Modal Quên mật khẩu */}
+        {showForgot && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white p-6 rounded shadow-lg w-80 relative">
+              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowForgot(false)}>&times;</button>
+              <h2 className="text-lg font-semibold mb-2">Quên mật khẩu</h2>
+              <p className="mb-2 text-sm text-gray-600">Nhập email đã đăng ký để nhận mật khẩu mới.</p>
+              <input
+                type="email"
+                className="w-full border rounded px-2 py-1 mb-2"
+                placeholder="Nhập email của bạn"
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+                disabled={forgotLoading}
+              />
+              <button
+                className="primary w-full"
+                disabled={forgotLoading || !forgotEmail}
+                onClick={async () => {
+                  setForgotLoading(true);
+                  try {
+                    const res = await axios.post('/forgot-password', { email: forgotEmail });
+                    toast.success(res.data.message || 'Đã gửi mật khẩu mới!');
+                    setShowForgot(false);
+                  } catch (err) {
+                    toast.error(err.response?.data?.message || 'Có lỗi xảy ra!');
+                  } finally {
+                    setForgotLoading(false);
+                  }
+                }}
+              >
+                {forgotLoading ? 'Đang gửi...' : 'Gửi mật khẩu mới'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

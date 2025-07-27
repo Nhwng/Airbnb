@@ -60,4 +60,7 @@ router.use('/reviews', require('./review'));
 router.use('/amenities', require('./amenity'));
 router.use('/availability', require('./availability'));
 
+// Forgot password
+router.use('/', require('./forgotPassword'));
+
 module.exports = router;
