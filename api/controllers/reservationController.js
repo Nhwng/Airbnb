@@ -8,13 +8,10 @@ exports.createReservation = async (req, res) => {
     const userData = req.user;
     const { place, checkIn, checkOut, numOfGuests, name, phone, price } = req.body;
 
-    console.log('Received request data:', { place, checkIn, checkOut, numOfGuests, name, phone, price });
     const listing_id = Number(place);
-    console.log('Converted listing_id:', listing_id, 'Type:', typeof listing_id);
 
     const listing = await Listing.findOne({ listing_id });
     if (!listing) {
-      console.log('Listing not found for listing_id:', listing_id);
       return res.status(404).json({
         message: 'Listing not found',
       });
@@ -31,17 +28,14 @@ exports.createReservation = async (req, res) => {
     const checkOutDate = new Date(checkOut);
     checkInDate.setUTCHours(0, 0, 0, 0);
     checkOutDate.setUTCHours(0, 0, 0, 0);
-    console.log('Processed check-in date:', checkInDate, 'Processed check-out date:', checkOutDate);
 
     const availabilities = await Availability.find({
       listing_id,
       date: { $gte: checkInDate, $lte: checkOutDate },
       is_available: true,
     });
-    console.log('Found availabilities:', availabilities.map(a => ({ date: a.date, is_available: a.is_available })));
 
     const daysDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)) + 1;
-    console.log('Expected days:', daysDiff, 'Available days:', availabilities.length);
 
     if (availabilities.length !== daysDiff) {
       return res.status(400).json({
@@ -81,13 +75,19 @@ exports.createReservation = async (req, res) => {
 exports.getReservations = async (req, res) => {
   try {
     const userData = req.user;
-    if (!userData) {
+    if (!userData || !userData.user_id) {
       return res.status(401).json({
         message: 'You are not authorized to access this page',
       });
     }
 
-    const reservations = await Reservation.find({ user_id: userData.user_id }).populate('listing_id');
+    const reservations = await Reservation.find({ user_id: userData.user_id });
+    if (!reservations || reservations.length === 0) {
+      return res.status(404).json({
+        message: 'No reservations found',
+      });
+    }
+
     res.status(200).json({
       reservations,
     });

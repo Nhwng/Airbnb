@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { setItemsInLocalStorage } from '@/utils';
 import { toast } from 'react-toastify';
 
 import {
@@ -80,6 +81,7 @@ const EditProfileDialog = () => {
       const res = await updateUser(userDetails);
       if (res && res.success && res.user) {
         setUser(res.user);
+        setItemsInLocalStorage('user', res.user);
         toast.success('Updated successfully!');
       } else {
         toast.error(res && res.message ? res.message : 'Update failed!');

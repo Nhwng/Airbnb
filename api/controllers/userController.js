@@ -123,13 +123,7 @@ exports.uploadPicture = async (req, res) => {
     const result = await cloudinary.uploader.upload(path, {
       folder: 'Airbnb/Users',
     });
-    // Xóa file tạm sau khi upload thành công
-    const fs = require('fs');
-    fs.unlink(path, (err) => {
-      if (err) {
-        console.error('Không thể xóa file tạm:', err);
-      }
-    });
+    
 
     const user = await User.findOne({ user_id: userData.user_id });
     if (!user) {
@@ -163,6 +157,7 @@ exports.updateUserDetails = async (req, res) => {
     const user = await User.findOne({ user_id: userData.user_id });
     if (!user) {
       return res.status(404).json({
+        success: false,
         message: 'User not found',
       });
     }
@@ -173,11 +168,29 @@ exports.updateUserDetails = async (req, res) => {
     if (password) user.password = await bcrypt.hash(password, 10);
 
     const updatedUser = await user.save();
-    cookieToken(updatedUser, res);
+    // Set cookie nhưng không gửi response ở đây
+    const token = updatedUser.getJwtToken();
+    const options = {
+      expires: new Date(Date.now() + process.env.COOKIE_TIME * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    };
+    updatedUser.password = undefined;
+    res.cookie('token', token, options);
+    return res.status(200).json({
+      success: true,
+      user: updatedUser,
+      token,
+      message: 'Profile updated successfully',
+    });
   } catch (err) {
+    console.error('Update user error:', err);
     res.status(500).json({
+      success: false,
       message: 'Internal server error',
       error: err.message,
+      stack: err.stack,
     });
   }
 };

@@ -16,10 +16,10 @@ const SingleBookedPlace = () => {
   const getBookings = async () => {
     try {
       setLoading(true);
-      const { data } = await axiosInstance.get('/bookings');
+      const { data } = await axiosInstance.get('/reservations');
 
       // filter the data to get current booking
-      const filteredBooking = data.booking.filter(
+      const filteredBooking = data.reservations.filter(
         (booking) => booking._id === id,
       );
 
