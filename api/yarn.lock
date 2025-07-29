@@ -1644,7 +1644,7 @@ netmask@^2.0.2:
 
 nodemailer@^7.0.5:
   version "7.0.5"
-  resolved "https://registry.npmjs.org/nodemailer/-/nodemailer-7.0.5.tgz"
+  resolved "https://registry.yarnpkg.com/nodemailer/-/nodemailer-7.0.5.tgz#3fa6607cab42401e4bedac9297e0aaa9ff84544b"
   integrity sha512-nsrh2lO3j4GkLLXoeEksAMgAOqxOv6QumNRVQTJwKH4nuiww6iC2y7GyANs9kRAxCexg3+lTWM3PZ91iLlVjfg==
 
 object-assign@^4, object-assign@^4.1.1:

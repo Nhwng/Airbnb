@@ -1,5 +1,8 @@
 node_modules
-.env
-.env.production
-.env.development
+# ignore all .env files
+**/.env
+**/.env.production
+**/.env.development
 **/node_modules
+**/CLAUDE.md
+references 
