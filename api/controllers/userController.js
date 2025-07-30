@@ -98,35 +98,47 @@ exports.login = async (req, res) => {
   }
 };
 
-// Google Login
-exports.googleLogin = async (req, res) => {
+// Facebook Login
+const axios = require('axios');
+exports.facebookLogin = async (req, res) => {
+  const { access_token } = req.body;
+  console.log('[FacebookLogin] access_token:', access_token);
+  if (!access_token) {
+    console.error('[FacebookLogin] Missing access_token');
+    return res.status(400).json({ message: 'Access token is required' });
+  }
   try {
-    const { first_name, last_name, email } = req.body;
-
-    if (!first_name || !email) {
-      return res.status(400).json({
-        message: 'First name and email are required',
-      });
+    // Lấy thông tin user từ Facebook Graph API
+    const fbRes = await axios.get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture&access_token=${access_token}`);
+    console.log('[FacebookLogin] Facebook Graph API response:', fbRes.data);
+    const { id, first_name, last_name, email, picture } = fbRes.data;
+    if (!email) {
+      console.error('[FacebookLogin] Facebook account does not have email:', fbRes.data);
+      return res.status(400).json({ message: 'Facebook account must have an email' });
     }
-
     let user = await User.findOne({ email });
     if (!user) {
+      // Nếu chưa có user thì tạo mới
+      // Tạo password ngẫu nhiên cho user Facebook
+      const randomPassword = Math.random().toString(36).slice(-8);
       user = await User.create({
         user_id: Math.floor(100000 + Math.random() * 900000),
         first_name,
         last_name,
         email,
-        password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10),
+        password: randomPassword,
         role: 'guest',
+        picture_url: picture?.data?.url || ''
       });
+      console.log('[FacebookLogin] Created new user:', user);
+    } else {
+      console.log('[FacebookLogin] Found existing user:', user);
     }
-
+    // Tạo JWT token và trả về
     cookieToken(user, res);
   } catch (err) {
-    res.status(500).json({
-      message: 'Internal server error',
-      error: err.message,
-    });
+    console.error('[FacebookLogin] Error:', err);
+    res.status(400).json({ message: 'Facebook login failed', error: err.message });
   }
 };
 

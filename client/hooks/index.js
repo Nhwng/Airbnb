@@ -66,14 +66,10 @@ export const useProvideAuth = () => {
         }
     };
 
-    const googleLogin = async (credential) => {
-        const decoded = jwt_decode(credential);
+    const facebookLogin = async (accessToken) => {
         try {
-            const { data } = await axiosInstance.post('user/google/login', {
-                first_name: decoded.given_name,
-                last_name: decoded.family_name,
-                email: decoded.email,
-                role: 'guest',
+            const { data } = await axiosInstance.post('user/facebook/login', {
+                access_token: accessToken,
             });
             if (data.user && data.token) {
                 setUser(data.user);
@@ -136,7 +132,7 @@ export const useProvideAuth = () => {
         setUser,
         register,
         login,
-        googleLogin,
+        facebookLogin,
         logout,
         loading,
         uploadPicture,

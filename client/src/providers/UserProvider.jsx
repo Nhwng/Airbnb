@@ -6,7 +6,7 @@ const initialState = {
   user: null,
   register: () => {},
   login: () => {},
-  googleLogin: () => {},
+  facebookLogin: () => {},
   logout: () => {},
   loading: true,
 };
