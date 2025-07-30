@@ -108,9 +108,7 @@ exports.facebookLogin = async (req, res) => {
     return res.status(400).json({ message: 'Access token is required' });
   }
   try {
-    // Lấy thông tin user từ Facebook Graph API
     const fbRes = await axios.get(`https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture&access_token=${access_token}`);
-    console.log('[FacebookLogin] Facebook Graph API response:', fbRes.data);
     const { id, first_name, last_name, email, picture } = fbRes.data;
     if (!email) {
       console.error('[FacebookLogin] Facebook account does not have email:', fbRes.data);
@@ -130,7 +128,6 @@ exports.facebookLogin = async (req, res) => {
         role: 'guest',
         picture_url: picture?.data?.url || ''
       });
-      console.log('[FacebookLogin] Created new user:', user);
     } else {
       console.log('[FacebookLogin] Found existing user:', user);
     }
