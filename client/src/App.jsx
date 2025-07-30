@@ -23,6 +23,7 @@ import { AmenityProvider } from './providers/AmenityProvider';  // Thêm mới p
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { getItemFromLocalStorage } from './utils';
 import NotFoundPage from './pages/NotFoundPage';
+import VerifyPinPage from './pages/VerifyPinPage';
 
 function App() {
   useEffect(() => {
@@ -43,6 +44,7 @@ function App() {
                       <Route index element={<IndexPage />} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
+                      <Route path="/verify-pin" element={<VerifyPinPage />} />
                       <Route path="/account" element={<ProfilePage />} />
                       <Route path="/account/listings" element={<ListingsPage />} />  {/* Cập nhật từ /places thành /listings */}
                       <Route path="/account/listings/new" element={<ListingsFormPage />} />  {/* Cập nhật từ /places/new thành /listings/new */}

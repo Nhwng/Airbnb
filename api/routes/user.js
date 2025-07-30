@@ -11,6 +11,7 @@ const {
   googleLogin,
   uploadPicture,
   updateUserDetails,
+  verifyEmailPin,
 } = require('../controllers/userController');
 const { isLoggedIn } = require('../middlewares/user');
 
@@ -20,5 +21,7 @@ router.route('/google/login').post(googleLogin);
 router.route('/upload-picture').post(isLoggedIn, upload.single('picture', 1), uploadPicture);
 router.route('/update-user').put(isLoggedIn, updateUserDetails);
 router.route('/logout').get(logout);
+router.route('/resend-email-pin').post(require('../controllers/userController').resendEmailPin);
+router.route('/verify-email-pin').post(verifyEmailPin);
 
 module.exports = router;

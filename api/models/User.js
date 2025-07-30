@@ -3,6 +3,14 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationPin: {
+    type: String,
+    select: false,
+  },
   user_id: {
     type: Number,
     required: true,
@@ -35,6 +43,10 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
+    select: false,
+  },
+    emailVerificationPinCreatedAt: {
+    type: Date,
     select: false,
   },
 }, { timestamps: true });

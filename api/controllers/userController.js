@@ -2,6 +2,7 @@ const User = require('../models/User');
 const cookieToken = require('../utils/cookieToken');
 const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2;
+const { sendVerificationEmail } = require('../utils/email');
 
 // Register/SignUp user
 exports.register = async (req, res) => {
@@ -21,6 +22,9 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Tạo mã PIN xác thực 6 số
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+
     user = await User.create({
       user_id: Math.floor(100000 + Math.random() * 900000),
       first_name,
@@ -29,9 +33,24 @@ exports.register = async (req, res) => {
       password: await bcrypt.hash(password, 10),
       role,
       picture_url: picture_url || '',
+      emailVerified: false,
+      emailVerificationPin: pin,
+      emailVerificationPinCreatedAt: new Date(),
     });
 
-    cookieToken(user, res);
+    // Gửi email xác thực
+    try {
+      await sendVerificationEmail(email, pin);
+    } catch (e) {
+      await User.deleteOne({ _id: user._id });
+      return res.status(500).json({ message: 'Gửi email xác thực thất bại.' });
+    }
+
+    res.status(201).json({
+      message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.',
+      userId: user._id,
+      email,
+    });
   } catch (err) {
     res.status(500).json({
       message: 'Internal server error',
@@ -55,6 +74,11 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(400).json({
         message: 'User does not exist',
+      });
+    }
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        message: 'Tài khoản chưa được xác thực email. Vui lòng kiểm tra email để xác thực.',
       });
     }
 
@@ -207,4 +231,55 @@ exports.logout = async (req, res) => {
     success: true,
     message: 'Logged out',
   });
+};
+
+// Gửi lại mã PIN xác thực email
+exports.resendEmailPin = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Thiếu email.' });
+  const user = await User.findOne({ email });
+  if (!user) return res.status(400).json({ message: 'Không tìm thấy người dùng.' });
+  if (user.emailVerified) return res.status(400).json({ message: 'Tài khoản đã xác thực.' });
+  // Tạo mã PIN mới
+  const pin = Math.floor(100000 + Math.random() * 900000).toString();
+  user.emailVerificationPin = pin;
+  user.emailVerificationPinCreatedAt = new Date();
+  await user.save();
+  try {
+    await require('../utils/email').sendVerificationEmail(email, pin);
+  } catch (e) {
+    return res.status(500).json({ message: 'Gửi email thất bại.' });
+  }
+  res.json({ message: 'Đã gửi lại mã xác thực.' });
+};
+// Xác thực mã PIN email
+exports.verifyEmailPin = async (req, res) => {
+  const { email, pin } = req.body;
+  if (!email || !pin) {
+    return res.status(400).json({ message: 'Thiếu email hoặc mã PIN.' });
+  }
+  const user = await User.findOne({ email }).select('+emailVerificationPin +emailVerificationPinCreatedAt');
+  if (!user) {
+    return res.status(400).json({ message: 'Không tìm thấy người dùng.' });
+  }
+  if (user.emailVerified) {
+    return res.status(400).json({ message: 'Tài khoản đã được xác thực.' });
+  }
+  // Kiểm tra hết hạn mã PIN (5 phút)
+  const now = new Date();
+  const createdAt = user.emailVerificationPinCreatedAt;
+  if (!createdAt || (now - createdAt) > 5 * 60 * 1000) {
+    return res.status(400).json({ message: 'Mã PIN đã hết hạn. Vui lòng gửi lại mã mới.' });
+  }
+  if (user.emailVerificationPin !== pin) {
+    return res.status(400).json({ message: 'Mã PIN không đúng.' });
+  }
+  user.emailVerified = true;
+  user.emailVerificationPin = undefined;
+  user.emailVerificationPinCreatedAt = undefined;
+  await user.save();
+  // Đăng nhập tự động sau xác thực
+  const token = user.getJwtToken();
+  res.cookie('token', token, { httpOnly: true });
+  res.json({ message: 'Xác thực thành công.', token });
 };

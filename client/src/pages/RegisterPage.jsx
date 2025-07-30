@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleLogin } from '@react-oauth/google';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../hooks';
 
@@ -15,6 +15,8 @@ const RegisterPage = () => {
     role: 'guest', // hoặc 'host' nếu cần
   });
   const [redirect, setRedirect] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState(null);
+  const navigate = useNavigate();
   const auth = useAuth();
 
   const handleFormData = (e) => {
@@ -24,11 +26,11 @@ const RegisterPage = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
     const response = await auth.register(formData);
     if (response.success) {
       toast.success(response.message);
-      setRedirect(true);
+      setVerifyEmail(response.email);
+      navigate('/verify-pin', { state: { email: response.email } });
     } else {
       toast.error(response.message);
     }
