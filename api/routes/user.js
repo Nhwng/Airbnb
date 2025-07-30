@@ -8,7 +8,7 @@ const {
   register,
   login,
   logout,
-  googleLogin,
+  facebookLogin,
   uploadPicture,
   updateUserDetails,
   verifyEmailPin,
@@ -17,7 +17,6 @@ const { isLoggedIn } = require('../middlewares/user');
 
 router.route('/register').post(register);
 router.route('/login').post(login);
-router.route('/google/login').post(googleLogin);
 router.route('/facebook/login').post(require('../controllers/userController').facebookLogin);
 router.route('/upload-picture').post(isLoggedIn, upload.single('picture', 1), uploadPicture);
 router.route('/update-user').put(isLoggedIn, updateUserDetails);
