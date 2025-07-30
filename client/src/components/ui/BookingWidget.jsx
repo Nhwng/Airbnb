@@ -65,23 +65,28 @@ export default function BookingWidget({ place }) {
       return;
     }
 
-    console.log('Sending dateRange to backend:', { from, to }); // Debug
+    console.log('Creating order with data:', { from, to, noOfGuests, name, phone }); // Debug
     setLoading(true);
     try {
-      const res = await axiosInstance.post('/reservations', {
+      // Step 1: Create order
+      const orderRes = await axiosInstance.post('/orders', {
         checkIn: from,
         checkOut: to,
-        noOfGuests,
+        numOfGuests: noOfGuests,
         name,
         phone,
         place: place.listing_id,
         price: numberOfNights * place.price,
       });
-      setRedirect(`/account/bookings/${res.data.reservation._id}`);
-      toast('Congratulations! Enjoy your trip.');
+
+      const orderId = orderRes.data.order.order_id;
+      console.log('Order created with ID:', orderId);
+
+      // Step 2: Redirect to payment page with order ID
+      setRedirect(`/payment/${orderId}`);
     } catch (err) {
-      console.error('Booking error:', err);
-      toast.error('Something went wrong!');
+      console.error('Order creation error:', err);
+      toast.error(err.response?.data?.message || 'Something went wrong creating your order!');
     } finally {
       setLoading(false);
     }

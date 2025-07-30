@@ -9,6 +9,13 @@ const reservationSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
   total_price: { type: Number, required: true },
+  order_id: { type: Number, ref: 'Order' },
+  payment_id: { type: Number, ref: 'Payment' },
+  status: {
+    type: String,
+    enum: ['confirmed', 'cancelled', 'completed'],
+    default: 'confirmed'
+  },
   created_at: { type: Date, default: Date.now },
 });
 
