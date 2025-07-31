@@ -57,14 +57,28 @@ const PaymentPage = () => {
         paymentMethod
       });
 
+      console.log('Payment response:', data);
+      console.log('Payment URL:', data.paymentUrl);
+
       if (paymentMethod === 'sandbox') {
         // Sandbox payment completes immediately
         toast.success('Payment completed successfully!');
         setRedirect('/account/bookings');
       } else if (paymentMethod === 'zalopay' && data.paymentUrl) {
         // Redirect to ZaloPay payment page
-        window.location.href = data.paymentUrl;
+        console.log('Redirecting to ZaloPay URL:', data.paymentUrl);
+        // Try multiple redirect methods
+        window.open(data.paymentUrl, '_self');
+        // Fallback
+        setTimeout(() => {
+          window.location.href = data.paymentUrl;
+        }, 100);
       } else {
+        console.log('Payment failed conditions:', {
+          method: paymentMethod,
+          hasPaymentUrl: !!data.paymentUrl,
+          paymentUrl: data.paymentUrl
+        });
         toast.error('Payment initiation failed');
       }
     } catch (err) {

@@ -43,18 +43,24 @@ exports.createPayment = async (req, res) => {
 
     let paymentResult = null;
     let amount = order.total_price;
+    
+    console.log('DEBUG - Original order amount:', amount);
 
     if (paymentMethod === 'zalopay') {
-      const vndAmount = Math.round(amount * 24000);
-      paymentResult = await createZaloPayOrder(vndAmount, order.order_id, userData.user_id);
-      amount = vndAmount;
+      // Assume the order amount is already in VND, no conversion needed
+      // If your prices are in USD, uncomment the next line:
+      // const vndAmount = Math.round(amount * 24000);
+      console.log('DEBUG - Amount being sent to ZaloPay:', amount);
+      paymentResult = await createZaloPayOrder(amount, order.order_id, userData.user_id);
+      console.log('DEBUG - Amount after ZaloPay call:', amount);
+      // amount remains the same since it's already in VND
     }
 
     const payment = await Payment.create({
       order_id: order.order_id,
       user_id: userData.user_id,
       amount: amount,
-      currency: paymentMethod === 'zalopay' ? 'VND' : 'USD',
+      currency: paymentMethod === 'zalopay' ? 'VND' : 'VND', // Using VND as base currency
       payment_method: paymentMethod,
       transaction_id: transactionId,
       external_transaction_id: paymentResult?.app_trans_id,
@@ -119,7 +125,12 @@ exports.createPayment = async (req, res) => {
 
 exports.handleZaloPayCallback = async (req, res) => {
   try {
-    console.log('Received ZaloPay callback:', req.body);
+    console.log('=== ZaloPay Callback Received ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    
     const { data: dataStr, mac: reqMac } = req.body;
     
     if (!zalopayConfig || !zalopayConfig.key2) {
@@ -135,9 +146,11 @@ exports.handleZaloPayCallback = async (req, res) => {
     }
 
     const paymentData = JSON.parse(dataStr);
-    const appUserMatch = paymentData.app_user.match(/user_(\d+)_order_(\d+)/);
+    // Updated regex to match reference format: user_123_order456 (no underscore before order)
+    const appUserMatch = paymentData.app_user.match(/user_(\d+)_order(\d+)/);
     
     if (!appUserMatch) {
+      console.log('Invalid app_user format:', paymentData.app_user);
       return res.status(400).json({ 
         return_code: -1, 
         return_message: 'Invalid app_user format' 
@@ -145,52 +158,64 @@ exports.handleZaloPayCallback = async (req, res) => {
     }
 
     const [, userId, orderId] = appUserMatch;
-    const status = paymentData.status === 1 ? 'completed' : 'failed';
+    // ZaloPay callback is only triggered for successful payments
+    const status = 'paid';
+    
+    console.log('Processing payment:', { userId, orderId, status });
 
-    const payment = await Payment.findOne({ 
-      order_id: Number(orderId),
-      user_id: Number(userId),
-      payment_method: 'zalopay'
-    });
-
-    if (!payment) {
+    // Update order status directly (following reference pattern)
+    const order = await Order.findOne({ order_id: Number(orderId) });
+    if (!order) {
       return res.status(400).json({ 
         return_code: -1, 
-        return_message: 'Payment not found' 
+        return_message: 'Order not found' 
       });
     }
 
-    payment.status = status;
-    payment.gateway_response = { ...payment.gateway_response, callback: paymentData };
-    await payment.save();
+    order.status = status;
+    await order.save();
+    console.log('Order status updated:', order.status);
 
-    const order = await Order.findOne({ order_id: Number(orderId) });
-    if (order) {
-      order.status = status === 'completed' ? 'paid' : 'cancelled';
-      await order.save();
+    // If payment successful, update payment status and create reservation
+    if (status === 'paid') {
+      // Update payment status
+      const payment = await Payment.findOne({ 
+        order_id: Number(orderId),
+        user_id: Number(userId),
+        payment_method: 'zalopay'
+      });
 
-      if (status === 'completed') {
-        await Availability.updateMany(
-          { 
-            listing_id: order.listing_id, 
-            date: { $gte: order.check_in, $lt: order.check_out } 
-          },
-          { $set: { is_available: false } }
-        );
-
-        await Reservation.create({
-          listing_id: order.listing_id,
-          user_id: order.user_id,
-          check_in: order.check_in,
-          check_out: order.check_out,
-          num_of_guests: order.num_of_guests,
-          name: order.guest_name,
-          phone: order.guest_phone,
-          total_price: order.total_price,
-          order_id: order.order_id,
-          payment_id: payment.payment_id,
-        });
+      if (payment) {
+        payment.status = 'completed';
+        payment.gateway_response = { ...payment.gateway_response, callback: paymentData };
+        await payment.save();
+        console.log('Payment status updated to completed');
       }
+
+      // Update availability
+      await Availability.updateMany(
+        { 
+          listing_id: order.listing_id, 
+          date: { $gte: order.check_in, $lt: order.check_out } 
+        },
+        { $set: { is_available: false } }
+      );
+      console.log('Availability updated');
+
+      // Create reservation
+      const reservation = await Reservation.create({
+        listing_id: order.listing_id,
+        user_id: order.user_id,
+        check_in: order.check_in,
+        check_out: order.check_out,
+        num_of_guests: order.num_of_guests,
+        name: order.guest_name,
+        phone: order.guest_phone,
+        total_price: order.total_price,
+        order_id: order.order_id,
+        payment_id: payment ? payment.payment_id : null,
+      });
+      console.log('Reservation created:', reservation._id);
     }
 
     return res.json({ 
@@ -200,7 +225,7 @@ exports.handleZaloPayCallback = async (req, res) => {
   } catch (error) {
     console.error('ZaloPay callback error:', error);
     return res.status(500).json({ 
-      return_code: 0,
+      return_code: 0, // ZaloPay will retry
       return_message: error.message 
     });
   }
@@ -257,3 +282,4 @@ exports.getUserPayments = async (req, res) => {
     });
   }
 };
+

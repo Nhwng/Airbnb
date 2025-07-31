@@ -10,6 +10,7 @@ const PaymentCallbackPage = () => {
   const [status, setStatus] = useState('processing'); // processing, success, failed
   const [message, setMessage] = useState('Processing your payment...');
   const [reservation, setReservation] = useState(null);
+  const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -17,6 +18,12 @@ const PaymentCallbackPage = () => {
         // Get ZaloPay callback parameters
         const apptransid = searchParams.get('apptransid');
         const status = searchParams.get('status');
+        
+        console.log('ZaloPay callback params:', {
+          apptransid,
+          status,
+          allParams: Object.fromEntries(searchParams.entries())
+        });
         
         if (!apptransid) {
           setStatus('failed');
@@ -26,28 +33,53 @@ const PaymentCallbackPage = () => {
 
         // ZaloPay status: 1 = success, -1 = failed, 0 = processing
         if (status === '1') {
-          // Payment successful - check our backend for reservation
-          const userPayments = await axiosInstance.get('/payments');
-          const payment = userPayments.data.payments.find(
-            p => p.external_transaction_id === apptransid && p.status === 'completed'
+          console.log('Payment successful, checking for completed reservation...');
+          
+          // Wait a moment for webhook to process, then check for reservations
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check if reservation was created (by webhook)
+          const reservations = await axiosInstance.get('/reservations');
+          const reservation = reservations.data.reservations.find(
+            r => r.order_id && r.order_id.toString() === apptransid.split('_')[1] // Extract order ID from app_trans_id
           );
-
-          if (payment) {
-            // Get the reservation created from this payment
-            const reservations = await axiosInstance.get('/reservations');
-            const reservation = reservations.data.reservations.find(
-              r => r.payment_id === payment.payment_id
-            );
-
+          
+          if (reservation) {
+            console.log('Found reservation:', reservation);
             setReservation(reservation);
             setStatus('success');
             setMessage('Payment completed successfully! Your booking is confirmed.');
             toast.success('Payment successful! Booking confirmed.');
+            
+            // Auto-redirect to bookings after 3 seconds
+            const redirectTimer = setInterval(() => {
+              setCountdown(prev => {
+                if (prev <= 1) {
+                  clearInterval(redirectTimer);
+                  window.location.href = '/account/bookings';
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
           } else {
+            console.log('Reservation not found yet, retrying...');
             setStatus('processing');
             setMessage('Payment is being processed. Please wait...');
-            // Retry after a few seconds
-            setTimeout(() => handleCallback(), 3000);
+            
+            // Retry with limited attempts
+            const currentRetries = parseInt(sessionStorage.getItem('payment-retries') || '0');
+            if (currentRetries < 8) { // Max 8 retries = 24 seconds
+              sessionStorage.setItem('payment-retries', (currentRetries + 1).toString());
+              setTimeout(() => handleCallback(), 3000);
+            } else {
+              setStatus('success'); // Assume success and redirect anyway
+              setMessage('Payment completed! Redirecting to your bookings...');
+              sessionStorage.removeItem('payment-retries');
+              setTimeout(() => {
+                window.location.href = '/account/bookings';
+              }, 2000);
+            }
           }
         } else if (status === '-1') {
           setStatus('failed');
@@ -90,7 +122,12 @@ const PaymentCallbackPage = () => {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-green-600 mb-2">Payment Successful!</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
+            <p className="text-gray-600 mb-2">{message}</p>
+            {countdown > 0 && (
+              <p className="text-sm text-blue-600 mb-6">
+                Redirecting to your bookings in {countdown} seconds...
+              </p>
+            )}
             
             {reservation && (
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
