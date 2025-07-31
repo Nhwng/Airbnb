@@ -1,11 +1,13 @@
 require("dotenv").config();
+const cron = require('node-cron');
 const express = require("express");
 const cors = require("cors");
 const connectWithDB = require("./config/db");
 const cookieSession = require("cookie-session");
 const cookieParser = require("cookie-parser");
 const cloudinary = require("cloudinary").v2;
-
+const path = require('path');
+const { exec } = require('child_process');
 // connect with database
 connectWithDB();
 
@@ -46,7 +48,20 @@ app.use(
 
 // use express router
 app.use("/", require("./routes"));
-
+cron.schedule('0 2 * * *', () => {
+  console.log('Running scheduled data sync at ' + new Date().toLocaleString());
+  const scriptPath = path.join(__dirname, 'scripts/scrape_data.py'); // Đường dẫn đến script tích hợp
+  exec(`python ${scriptPath}`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Cron error: ${error}`);
+      return;
+    }
+    console.log(`Cron stdout: ${stdout}`);
+    if (stderr) {
+      console.error(`Cron stderr: ${stderr}`);
+    }
+  });
+});
 app.listen(process.env.PORT || 8000, (err) => {
   if (err) {
     console.log("Error in connecting to server: ", err);

@@ -26,8 +26,12 @@ import { AmenityProvider } from './providers/AmenityProvider';  // Thêm mới p
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { getItemFromLocalStorage } from './utils';
 import NotFoundPage from './pages/NotFoundPage';
+<<<<<<< HEAD
 import VerifyPinPage from './pages/VerifyPinPage';
 
+=======
+import DataSyncPage from './pages/DataSyncPage';
+>>>>>>> 23d3275 (add catalog, scrape scheduler)
 function App() {
   useEffect(() => {
     // set the token on refreshing the website
@@ -58,6 +62,7 @@ function App() {
                       <Route path="/account/bookings/:id" element={<SingleBookedPlace />} />
                       <Route path="/payment/:orderId" element={<PaymentPage />} />
                       <Route path="/payment/callback" element={<PaymentCallbackPage />} />
+                      <Route path="/datascraper" element={<DataSyncPage />} /> 
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
                   </Routes>

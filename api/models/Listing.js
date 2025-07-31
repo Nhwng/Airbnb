@@ -12,6 +12,7 @@ const listingSchema = new mongoose.Schema({
   person_capacity: { type: Number, required: true },
   room_type: { type: String, required: true },
   title: { type: String, required: true },
+  city: { type: String, required: true }
 });
 
 listingSchema.pre('save', function (next) {
