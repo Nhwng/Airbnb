@@ -22,7 +22,7 @@ const PlaceCard = ({ place, images }) => {
         />
         <h2 className="truncate font-bold">{title}</h2>
         <div className="mt-1">
-          <span className="font-semibold">₹{nightly_price} </span>
+          <span className="font-semibold">₫{new Intl.NumberFormat('vi-VN').format(nightly_price)} </span>
           per night
         </div>
       </div>

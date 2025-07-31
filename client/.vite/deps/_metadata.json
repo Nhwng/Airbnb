@@ -1,0 +1,38 @@
+{
+  "hash": "c1eb990c",
+  "browserHash": "ef6cb8fe",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "41a4fa42",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "85df2c32",
+      "needsInterop": false
+    },
+    "react-toastify": {
+      "src": "../../node_modules/react-toastify/dist/react-toastify.esm.mjs",
+      "file": "react-toastify.js",
+      "fileHash": "4070f5d8",
+      "needsInterop": false
+    },
+    "date-fns": {
+      "src": "../../node_modules/date-fns/index.js",
+      "file": "date-fns.js",
+      "fileHash": "f6da818c",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-PSZ65TEE": {
+      "file": "chunk-PSZ65TEE.js"
+    },
+    "chunk-TCQZMY3T": {
+      "file": "chunk-TCQZMY3T.js"
+    }
+  }
+}
