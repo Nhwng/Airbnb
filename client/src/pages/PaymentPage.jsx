@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { Clock, AlertTriangle, User, Phone, Users, Calendar, CreditCard, Home, ArrowLeft, Shield } from 'lucide-react';
 
 import axiosInstance from '@/utils/axios';
 import Spinner from '@/components/ui/Spinner';
@@ -49,36 +50,22 @@ const PaymentPage = () => {
     }
   }, [orderId, user]);
 
-  const handlePayment = async (paymentMethod) => {
+  const handlePayment = async () => {
     setProcessing(true);
     try {
       const { data } = await axiosInstance.post('/payments', {
         orderId: order.order_id,
-        paymentMethod
+        paymentMethod: 'zalopay'
       });
 
-      console.log('Payment response:', data);
-      console.log('Payment URL:', data.paymentUrl);
-
-      if (paymentMethod === 'sandbox') {
-        // Sandbox payment completes immediately
-        toast.success('Payment completed successfully!');
-        setRedirect('/account/bookings');
-      } else if (paymentMethod === 'zalopay' && data.paymentUrl) {
+      if (data.paymentUrl) {
         // Redirect to ZaloPay payment page
-        console.log('Redirecting to ZaloPay URL:', data.paymentUrl);
-        // Try multiple redirect methods
         window.open(data.paymentUrl, '_self');
         // Fallback
         setTimeout(() => {
           window.location.href = data.paymentUrl;
         }, 100);
       } else {
-        console.log('Payment failed conditions:', {
-          method: paymentMethod,
-          hasPaymentUrl: !!data.paymentUrl,
-          paymentUrl: data.paymentUrl
-        });
         toast.error('Payment initiation failed');
       }
     } catch (err) {
@@ -115,119 +102,204 @@ const PaymentPage = () => {
   const timeRemaining = Math.max(0, Math.floor((new Date(order.expires_at) - new Date()) / 1000 / 60));
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Complete Your Payment</h1>
-        
-        {/* Order Expiry Warning */}
-        {timeRemaining > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              <span className="text-yellow-800 font-medium">
-                Order expires in {timeRemaining} minutes
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Order Summary */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Order ID:</span>
-              <span className="font-medium">#{order.order_id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Guest Name:</span>
-              <span className="font-medium">{order.guest_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Phone:</span>
-              <span className="font-medium">{order.guest_phone}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Check-in:</span>
-              <span className="font-medium">{new Date(order.check_in).toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Check-out:</span>
-              <span className="font-medium">{new Date(order.check_out).toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Guests:</span>
-              <span className="font-medium">{order.num_of_guests}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-lg border-t pt-2">
-              <span>Total:</span>
-              <span>${order.total_price}</span>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setRedirect('/account/orders')}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-1" />
+              Back to Orders
+            </button>
+            <div className="h-6 w-px bg-gray-300" />
+            <h1 className="text-2xl font-semibold text-gray-900">Complete Payment</h1>
           </div>
         </div>
+      </div>
 
-        {/* Payment Methods */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold mb-4">Choose Payment Method</h2>
-          
-          {/* Sandbox Payment */}
-          <button
-            onClick={() => handlePayment('sandbox')}
-            disabled={processing}
-            className="w-full bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {processing ? (
-              <Spinner />
-            ) : (
-              <>
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
-                  <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd"/>
-                </svg>
-                Pay with Test Card (Sandbox)
-              </>
-            )}
-          </button>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Order Summary Card */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-rose-50 to-pink-50 px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                    <Home className="w-5 h-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Order #{order.order_id}</h2>
+                    <p className="text-gray-600 text-sm">Review your booking details</p>
+                  </div>
+                </div>
+              </div>
 
-          {/* ZaloPay Payment */}
-          <button
-            onClick={() => handlePayment('zalopay')}
-            disabled={processing}
-            className="w-full bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {processing ? (
-              <Spinner />
-            ) : (
-              <>
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/>
-                </svg>
-                Pay with ZaloPay
-              </>
-            )}
-          </button>
-        </div>
+              {/* Order Expiry Warning */}
+              {timeRemaining > 0 && (
+                <div className="mx-6 mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mr-3" />
+                    <div>
+                      <div className="font-medium text-amber-800">
+                        Order expires in {timeRemaining} minutes
+                      </div>
+                      <div className="text-sm text-amber-700 mt-1">
+                        Complete your payment before the order expires
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-        {/* Cancel Order */}
-        <div className="mt-6 pt-6 border-t">
-          <button
-            onClick={async () => {
-              if (window.confirm('Are you sure you want to cancel this order?')) {
-                try {
-                  await axiosInstance.delete(`/orders/${order.order_id}`);
-                  toast.success('Order cancelled successfully');
-                  setRedirect('/');
-                } catch (err) {
-                  toast.error('Failed to cancel order');
-                }
-              }
-            }}
-            className="text-red-600 hover:text-red-800 underline"
-          >
-            Cancel Order
-          </button>
+              {/* Order Details */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Guest Information */}
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                      Guest Information
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-gray-700">
+                        <User className="w-4 h-4 mr-3 text-gray-400" />
+                        <span className="font-medium">{order.guest_name}</span>
+                      </div>
+                      <div className="flex items-center text-gray-700">
+                        <Phone className="w-4 h-4 mr-3 text-gray-400" />
+                        <span>{order.guest_phone}</span>
+                      </div>
+                      <div className="flex items-center text-gray-700">
+                        <Users className="w-4 h-4 mr-3 text-gray-400" />
+                        <span>{order.num_of_guests} {order.num_of_guests === 1 ? 'guest' : 'guests'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Booking Details */}
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                      Booking Details
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-gray-700">
+                        <Calendar className="w-4 h-4 mr-3 text-gray-400" />
+                        <div>
+                          <div className="font-medium">
+                            {new Date(order.check_in).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })} - {new Date(order.check_out).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {Math.ceil((new Date(order.check_out) - new Date(order.check_in)) / (1000 * 60 * 60 * 24))} nights
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-gray-700">
+                        <Clock className="w-4 h-4 mr-3 text-gray-400" />
+                        <div className="text-sm">
+                          <div className="font-medium">Order Created</div>
+                          <div className="text-gray-500">
+                            {new Date(order.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="border-t border-gray-100 bg-gray-50 px-6 py-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <CreditCard className="w-5 h-5 text-gray-400 mr-2" />
+                    <span className="text-lg font-medium text-gray-900">Total Amount</span>
+                  </div>
+                  <span className="text-2xl font-bold text-gray-900">${order.total_price}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method Card */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden sticky top-8">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900">Payment Method</h3>
+                <p className="text-gray-600 text-sm mt-1">Secure payment powered by ZaloPay</p>
+              </div>
+
+              <div className="p-6">
+                {/* ZaloPay Payment Button */}
+                <button
+                  onClick={handlePayment}
+                  disabled={processing || timeRemaining <= 0}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl"
+                >
+                  {processing ? (
+                    <>
+                      <Spinner />
+                      <span className="ml-2">Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                        <span className="text-blue-600 font-bold text-sm">Z</span>
+                      </div>
+                      <span className="font-semibold text-lg">Pay with ZaloPay</span>
+                      <CreditCard className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+
+                {/* Security Notice */}
+                <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center text-green-700">
+                    <Shield className="w-4 h-4 mr-2" />
+                    <span className="text-sm font-medium">Secure Payment</span>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    Your payment information is encrypted and secure
+                  </p>
+                </div>
+
+                {/* Cancel Order */}
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to cancel this order?')) {
+                        try {
+                          await axiosInstance.delete(`/orders/${order.order_id}`);
+                          toast.success('Order cancelled successfully');
+                          setRedirect('/');
+                        } catch (err) {
+                          toast.error('Failed to cancel order');
+                        }
+                      }
+                    }}
+                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 py-2 px-4 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Cancel Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
