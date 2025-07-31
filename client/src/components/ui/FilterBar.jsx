@@ -3,7 +3,7 @@ import axiosInstance from '@/utils/axios';
 
 const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
   const [filters, setFilters] = useState({
-    priceRange: initialFilters.priceRange || [100000, 2000000],
+    priceRange: initialFilters.priceRange || [100000, 4000000],
     selectedCities: initialFilters.selectedCities || [],
     selectedHomeTypes: initialFilters.selectedHomeTypes || [],
     guests: initialFilters.guests || 1,
@@ -65,7 +65,7 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
 
   const clearAllFilters = () => {
     setFilters({
-      priceRange: [100000, 2000000],
+      priceRange: [100000, 4000000],
       selectedCities: [],
       selectedHomeTypes: [],
       guests: 1
@@ -74,7 +74,7 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
 
   const hasActiveFilters = () => {
     return filters.priceRange[0] !== 100000 || 
-           filters.priceRange[1] !== 2000000 || 
+           filters.priceRange[1] !== 4000000 || 
            filters.selectedCities.length > 0 || 
            filters.selectedHomeTypes.length > 0 || 
            filters.guests !== 1;
@@ -82,7 +82,7 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.priceRange[0] !== 100000 || filters.priceRange[1] !== 2000000) count++;
+    if (filters.priceRange[0] !== 100000 || filters.priceRange[1] !== 4000000) count++;
     if (filters.selectedCities.length > 0) count++;
     if (filters.selectedHomeTypes.length > 0) count++;
     if (filters.guests !== 1) count++;
@@ -166,14 +166,14 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
                             <div 
                               className="absolute h-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"
                               style={{
-                                left: `${((filters.priceRange[0] - 100000) / (2000000 - 100000)) * 100}%`,
-                                width: `${((filters.priceRange[1] - filters.priceRange[0]) / (2000000 - 100000)) * 100}%`
+                                left: `${((filters.priceRange[0] - 100000) / (4000000 - 100000)) * 100}%`,
+                                width: `${((filters.priceRange[1] - filters.priceRange[0]) / (4000000 - 100000)) * 100}%`
                               }}
                             />
                             <input
                               type="range"
                               min="100000"
-                              max="2000000"
+                              max="4000000"
                               step="50000"
                               value={filters.priceRange[0]}
                               onChange={(e) => handlePriceChange(0, e.target.value)}
@@ -182,7 +182,7 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
                             <input
                               type="range"
                               min="100000"
-                              max="2000000"
+                              max="4000000"
                               step="50000"
                               value={filters.priceRange[1]}
                               onChange={(e) => handlePriceChange(1, e.target.value)}

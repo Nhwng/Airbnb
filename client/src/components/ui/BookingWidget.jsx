@@ -99,7 +99,7 @@ export default function BookingWidget({ place }) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 relative">
       <div className="text-xl text-center text-gray-700 font-medium">
-        ${place.price} / night
+        ₫{new Intl.NumberFormat('vi-VN').format(place.price)} / night
       </div>
 
       {loading ? (
@@ -172,7 +172,7 @@ export default function BookingWidget({ place }) {
             disabled={!from || !to}
           >
             Book this place
-            {numberOfNights > 0 && ` $${numberOfNights * place.price}`}
+            {numberOfNights > 0 && ` ₫${new Intl.NumberFormat('vi-VN').format(numberOfNights * place.price)}`}
           </button>
         </>
       )}
