@@ -30,7 +30,6 @@ export const useProvideAuth = () => {
 
     const register = async (formData) => {
         const { first_name, last_name, email, password, role } = formData;
-
         try {
             const { data } = await axiosInstance.post('user/register', {
                 first_name,
@@ -39,12 +38,8 @@ export const useProvideAuth = () => {
                 password,
                 role,
             });
-            if (data.user && data.token) {
-                setUser(data.user);
-                setItemsInLocalStorage('user', data.user);
-                setItemsInLocalStorage('token', data.token);
-            }
-            return { success: true, message: 'Registration successful' };
+            // Trả về email và userId để chuyển hướng sang xác thực mã PIN
+            return { success: true, message: data.message, email: data.email, userId: data.userId };
         } catch (error) {
             const { message } = error.response.data;
             return { success: false, message };
@@ -71,14 +66,10 @@ export const useProvideAuth = () => {
         }
     };
 
-    const googleLogin = async (credential) => {
-        const decoded = jwt_decode(credential);
+    const facebookLogin = async (accessToken) => {
         try {
-            const { data } = await axiosInstance.post('user/google/login', {
-                first_name: decoded.given_name,
-                last_name: decoded.family_name,
-                email: decoded.email,
-                role: 'guest',
+            const { data } = await axiosInstance.post('user/facebook/login', {
+                access_token: accessToken,
             });
             if (data.user && data.token) {
                 setUser(data.user);
@@ -141,7 +132,7 @@ export const useProvideAuth = () => {
         setUser,
         register,
         login,
-        googleLogin,
+        facebookLogin,
         logout,
         loading,
         uploadPicture,

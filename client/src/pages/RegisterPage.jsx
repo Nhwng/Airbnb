@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleLogin } from '@react-oauth/google';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../hooks';
 
@@ -15,6 +14,8 @@ const RegisterPage = () => {
     role: 'guest', // hoặc 'host' nếu cần
   });
   const [redirect, setRedirect] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState(null);
+  const navigate = useNavigate();
   const auth = useAuth();
 
   const handleFormData = (e) => {
@@ -24,21 +25,11 @@ const RegisterPage = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
     const response = await auth.register(formData);
     if (response.success) {
       toast.success(response.message);
-      setRedirect(true);
-    } else {
-      toast.error(response.message);
-    }
-  };
-
-  const handleGoogleLogin = async (credential) => {
-    const response = await auth.googleLogin(credential);
-    if (response.success) {
-      toast.success(response.message);
-      setRedirect(true);
+      setVerifyEmail(response.email);
+      navigate('/verify-pin', { state: { email: response.email } });
     } else {
       toast.error(response.message);
     }
@@ -93,20 +84,6 @@ const RegisterPage = () => {
           <div className="h-0 w-1/2 border-[1px]"></div>
           <p className="small -mt-1">or</p>
           <div className="h-0 w-1/2 border-[1px]"></div>
-        </div>
-
-        {/* Google login button */}
-        <div className="flex h-[50px] justify-center">
-          <GoogleLogin
-            onSuccess={(credentialResponse) => {
-              handleGoogleLogin(credentialResponse.credential);
-            }}
-            onError={() => {
-              console.log('Login Failed');
-            }}
-            text="continue_with"
-            width="350"
-          />
         </div>
 
         <div className="py-2 text-center text-gray-500">
