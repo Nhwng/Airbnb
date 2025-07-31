@@ -142,48 +142,34 @@ export const useProvideAuth = () => {
 
 // LISTINGS (Thay thế Places)
 export const useListings = () => {
-  const [listings, setListings] = useState([]);
-  const [images, setImages] = useState({});
-  const [loading, setLoading] = useState(true);
-
-  const getListings = async () => {
-    try {
-      const { data: listingsData } = await axiosInstance.get('/listings');
-      setListings(listingsData);
-      
-      // Lấy ảnh cho từng listing
-      for (const listing of listingsData) {
-        const { data: imagesData } = await axiosInstance.get(`/images/${listing.listing_id}`);
-        setImages((prevImages) => ({
-          ...prevImages,
-          [listing.listing_id]: imagesData,
-        }));
-      }
-      setLoading(false);
-    } catch (error) {
-      console.log('Error fetching listings or images:', error);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    getListings();
-  }, []);
-
-  return { listings, images, loading };
+    return useContext(ListingContext);
 };
 
 export const useProvideListings = () => {
     const [listings, setListings] = useState([]);
+    const [images, setImages] = useState({});
     const [loading, setLoading] = useState(true);
 
     const getListings = async () => {
         try {
-            const { data } = await axiosInstance.get('/listings');  // Đảm bảo bạn gọi đúng endpoint
-            setListings(data);
+            const { data: listingsData } = await axiosInstance.get('/listings');
+            setListings(listingsData);
+            
+            // Lấy ảnh cho từng listing
+            for (const listing of listingsData) {
+                try {
+                    const { data: imagesData } = await axiosInstance.get(`/images/${listing.listing_id}`);
+                    setImages((prevImages) => ({
+                        ...prevImages,
+                        [listing.listing_id]: imagesData,
+                    }));
+                } catch (imgError) {
+                    console.warn('Error fetching images for listing:', listing.listing_id, imgError);
+                }
+            }
             setLoading(false);
         } catch (error) {
-            console.error('Error fetching listings:', error);  // In ra lỗi chi tiết để debug
+            console.error('Error fetching listings:', error);
             setLoading(false);
         }
     };
@@ -195,6 +181,7 @@ export const useProvideListings = () => {
     return {
         listings,
         setListings,
+        images,
         loading,
         setLoading,
     };

@@ -4,6 +4,7 @@ import { useProvideListings } from '../../hooks';  // Thay đổi từ useProvid
 const initialState = {
   listings: [],   // Thay 'places' thành 'listings'
   setListings: () => {},
+  images: {},
   loading: true,
   setLoading: () => {},
 };
