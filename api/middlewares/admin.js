@@ -1,0 +1,41 @@
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+exports.isAdmin = async (req, res, next) => {
+  const token = req.cookies.token || (req.header('Authorization') && req.header('Authorization').replace('Bearer ', ''));
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access denied. Admin login required.',
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ user_id: decoded.user_id });
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.',
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token',
+    });
+  }
+};

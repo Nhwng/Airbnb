@@ -39,9 +39,9 @@ const SearchBar = () => {
             value={searchText}
           />
         </div>
-        <div className="bg-blue flex cursor-pointer  items-center bg-primary text-white">
+        <div className="bg-blue flex cursor-pointer  items-center bg-rose-600 text-white">
           <button
-            className="flex rounded-r-full bg-primary py-2 px-4 md:p-2"
+            className="flex rounded-r-full bg-rose-600 hover:bg-rose-700 transition-colors py-2 px-4 md:p-2"
             onClick={handleSearch}
           >
             <svg

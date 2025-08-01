@@ -61,6 +61,8 @@ router.use('/images', require('./image'));
 router.use('/reviews', require('./review'));
 router.use('/amenities', require('./amenity'));
 router.use('/availability', require('./availability'));
+router.use('/favorites', require('./favorite'));
+router.use('/admin', require('./admin'));
 
 // Forgot password
 router.use('/', require('./forgotPassword'));

@@ -86,7 +86,11 @@ const ProfilePage = () => {
               {/* <Button varient="secondary">Edit profile</Button> */}
               <EditProfileDialog />
 
-              <Button variant="secondary" onClick={handleLogout}>
+              <Button 
+                variant="outline" 
+                onClick={handleLogout}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </Button>

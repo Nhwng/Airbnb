@@ -59,11 +59,20 @@ export const Header = () => {
 
         {showSearchBar && <SearchBar />}
 
-        <Link
-          to={user ? '/account' : '/login'}
-          className="w-50 flex h-full items-center gap-2 rounded-full border-gray-300 py-1 px-2 md:border"
-        >
-          <svg
+        <div className="flex items-center gap-2">
+          {user && user.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="hidden md:flex items-center gap-1 px-3 py-2 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors text-sm font-medium"
+            >
+              Admin
+            </Link>
+          )}
+          <Link
+            to={user ? '/account' : '/login'}
+            className="w-50 flex h-full items-center gap-2 rounded-full border-gray-300 py-1 px-2 md:border"
+          >
+            <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -115,7 +124,8 @@ export const Header = () => {
               </svg>
             )}
           </div>
-        </Link>
+          </Link>
+        </div>
       </div>
       <br className="border border-gray-600" />
     </header>

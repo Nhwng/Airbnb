@@ -168,7 +168,7 @@ export default function BookingWidget({ place }) {
 
           <button
             onClick={handleBooking}
-            className="w-full mt-4 bg-primary text-primary-foreground p-2 rounded-md hover:bg-primary/90 disabled:bg-primary/50"
+            className="w-full mt-4 bg-rose-600 text-white p-2 rounded-md hover:bg-rose-700 disabled:bg-rose-400 transition-colors"
             disabled={!from || !to}
           >
             Book this place

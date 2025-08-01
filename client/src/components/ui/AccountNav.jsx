@@ -12,7 +12,7 @@ const AccountNav = () => {
     let classes =
       'flex justify-center mx-10 md:mx-0 gap-1 py-2 px-6 rounded-full';
     if (type === subpage) {
-      classes += ' bg-primary text-white';
+      classes += ' bg-rose-600 text-white';
     } else {
       classes += ' bg-gray-200';
     }
@@ -70,6 +70,23 @@ const AccountNav = () => {
           />
         </svg>
         My bookings
+      </Link>
+      <Link className={linkClases('favorites')} to={'/account/favorites'}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-6 w-6"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+          />
+        </svg>
+        My favorites
       </Link>
       <Link className={linkClases('places')} to={'/account/places'}>
         <svg

@@ -64,7 +64,7 @@ button {
 }
 
 button.primary {
-  @apply w-full rounded-[10px] bg-primary p-2 text-white;
+  @apply w-full rounded-[10px] bg-rose-600 hover:bg-rose-700 p-2 text-white transition-colors;
 }
 
 button.social {

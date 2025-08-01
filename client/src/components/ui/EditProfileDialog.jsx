@@ -97,7 +97,7 @@ const EditProfileDialog = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-600 ">
+        <Button className="bg-rose-600 hover:bg-rose-700 text-white">
           <PenSquare className="mr-2 h-4 w-4" />
           Edit Profile
         </Button>
@@ -188,7 +188,7 @@ const EditProfileDialog = () => {
           <Button
             disabled={loading}
             type="submit"
-            className="w-full"
+            className="w-full bg-rose-600 hover:bg-rose-700 text-white"
             onClick={handleSaveChanges}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
