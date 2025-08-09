@@ -1,9 +1,10 @@
+
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-
 const upload = multer({ dest: './tmp/' });
-
+const { isAdmin } = require('../middlewares/admin');
+const { isLoggedIn } = require('../middlewares/user');
 const {
   register,
   login,
@@ -12,8 +13,13 @@ const {
   uploadPicture,
   updateUserDetails,
   verifyEmailPin,
+  requestHostRole,
+  handleHostRequest,
 } = require('../controllers/userController');
-const { isLoggedIn } = require('../middlewares/user');
+// Guest gửi yêu cầu đăng ký làm host
+router.route('/request-host').post(isLoggedIn, requestHostRole);
+// Admin duyệt hoặc từ chối yêu cầu làm host
+router.route('/handle-host-request').post(isAdmin, handleHostRequest);
 
 router.route('/register').post(register);
 router.route('/login').post(login);

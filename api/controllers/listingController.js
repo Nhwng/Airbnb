@@ -17,25 +17,30 @@ exports.addListing = async (req, res) => {
       room_type,
       latitude,
       longitude,
+      city
     } = req.body;
 
-    const listing = await Listing.create({
-      host_id: userData.user_id,
+
+    const listingData = {
+      host_id: Number(userData.user_id),
       listing_id: Math.floor(100000 + Math.random() * 900000),
       title,
       description,
       currency,
-      nightly_price,
-      person_capacity,
+      nightly_price: Number(nightly_price),
+      person_capacity: Number(person_capacity),
       room_type,
-      latitude,
-      longitude,
-    });
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      city
+    };
+    const listing = await Listing.create(listingData);
 
     res.status(200).json({
       listing,
     });
   } catch (err) {
+    console.error('addListing error:', err);
     res.status(500).json({
       message: 'Internal server error',
       error: err.message,

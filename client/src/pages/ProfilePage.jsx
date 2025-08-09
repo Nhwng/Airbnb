@@ -6,7 +6,7 @@ import AccountNav from '@/components/ui/AccountNav';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 
-import PlacesPage from './ListingsPage';
+import ListingsPage from './ListingsPage';
 import { useAuth } from '../../hooks';
 import { LogOut, Mail, PenSquare, Text } from 'lucide-react';
 import EditProfileDialog from '@/components/ui/EditProfileDialog';
@@ -85,7 +85,7 @@ const ProfilePage = () => {
             <div className="flex w-full justify-around sm:justify-end sm:gap-5 md:gap-10">
               {/* <Button varient="secondary">Edit profile</Button> */}
               <EditProfileDialog />
-
+              
               <Button 
                 variant="outline" 
                 onClick={handleLogout}
@@ -98,7 +98,7 @@ const ProfilePage = () => {
           </div>
         </div>
       )}
-      {subpage === 'places' && <PlacesPage />}
+  {subpage === 'listings' && <ListingsPage />}
     </div>
   );
 };

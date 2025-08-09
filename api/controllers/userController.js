@@ -292,3 +292,54 @@ exports.verifyEmailPin = async (req, res) => {
   res.cookie('token', token, { httpOnly: true });
   res.json({ message: 'Xác thực thành công.', token });
 };
+
+// Admin duyệt hoặc từ chối yêu cầu làm host
+exports.handleHostRequest = async (req, res) => {
+  try {
+    const { userId, action } = req.body; // userId: id của user cần duyệt, action: 'approve' hoặc 'reject'
+    if (!userId || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc action không hợp lệ.' });
+    }
+    const user = await User.findOne({ user_id: userId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy user.' });
+    }
+    if (user.role !== 'guest' || user.hostRequestStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Yêu cầu không hợp lệ.' });
+    }
+    if (action === 'approve') {
+      user.hostRequestStatus = 'approved';
+      user.role = 'host';
+    } else {
+      user.hostRequestStatus = 'rejected';
+    }
+    await user.save();
+    return res.status(200).json({ success: true, message: `Yêu cầu đã được ${action === 'approve' ? 'duyệt' : 'từ chối'}.` });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+  }
+};
+// Guest gửi yêu cầu đăng ký làm host
+exports.requestHostRole = async (req, res) => {
+  try {
+    const userData = req.user;
+    const user = await User.findOne({ user_id: userData.user_id });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    if (user.role !== 'guest') {
+      return res.status(400).json({ success: false, message: 'Chỉ guest mới có thể gửi yêu cầu làm host.' });
+    }
+    if (user.hostRequestStatus === 'pending') {
+      return res.status(400).json({ success: false, message: 'Bạn đã gửi yêu cầu, vui lòng chờ admin duyệt.' });
+    }
+    if (user.hostRequestStatus === 'approved') {
+      return res.status(400).json({ success: false, message: 'Bạn đã là host.' });
+    }
+    user.hostRequestStatus = 'pending';
+    await user.save();
+    return res.status(200).json({ success: true, message: 'Yêu cầu đăng ký làm host đã được gửi. Vui lòng chờ admin duyệt.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+  }
+};

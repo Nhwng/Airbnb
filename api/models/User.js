@@ -35,6 +35,12 @@ const userSchema = new mongoose.Schema({
     required: true,
     enum: ['host', 'guest', 'admin'],
   },
+  // Trạng thái đăng ký làm host: none (chưa đăng ký), pending (đang chờ duyệt), approved (đã duyệt), rejected (bị từ chối)
+  hostRequestStatus: {
+    type: String,
+    enum: ['none', 'pending', 'approved', 'rejected'],
+    default: 'none',
+  },
   email: {
     type: String,
     required: true,

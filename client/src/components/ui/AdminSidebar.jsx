@@ -38,6 +38,15 @@ const AdminSidebar = ({ activeModule, setActiveModule }) => {
       hoverColor: 'hover:bg-purple-100'
     },
     {
+      id: 'hostRequests',
+      label: 'Host Requests',
+      description: 'Duyệt yêu cầu làm host',
+      icon: Users,
+      color: 'text-rose-600',
+      bgColor: 'bg-rose-50',
+      hoverColor: 'hover:bg-rose-100'
+    },
+    {
       id: 'transactions',
       label: 'Transaction Management',
       description: 'Purchase history & status',

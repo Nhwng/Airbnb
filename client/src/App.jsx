@@ -8,7 +8,7 @@ import IndexPage from './pages/IndexPage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
-import ListingsPage from './pages/ListingPage';  // Cập nhật từ PlacesPage thành ListingsPage
+import ListingsPage from './pages/ListingsPage';
 import BookingsPage from './pages/BookingsPage';
 import ListingsFormPage from './pages/ListingsFormPage';  // Cập nhật từ PlacesFormPage thành ListingsFormPage
 import ListingPage from './pages/ListingPage';  // Cập nhật từ PlacePage thành ListingPage
@@ -52,9 +52,10 @@ function App() {
                       <Route path="/register" element={<RegisterPage />} />
                       <Route path="/verify-pin" element={<VerifyPinPage />} />
                       <Route path="/account" element={<ProfilePage />} />
-                      <Route path="/account/listings" element={<ListingsPage />} />  {/* Cập nhật từ /places thành /listings */}
+                      <Route path="/account/listings" element={<ListingsPage />} />
                       <Route path="/account/listings/new" element={<ListingsFormPage />} />  {/* Cập nhật từ /places/new thành /listings/new */}
-                      <Route path="/account/listings/:id" element={<ListingsFormPage />} />  {/* Cập nhật từ /places/:id thành /listings/:id */}
+                      <Route path="/account/listings/:id" element={<ListingsFormPage />} />
+                      <Route path="/account/listings/:id/edit" element={<ListingsFormPage />} />
                       <Route path="/listing/:id" element={<ListingPage />} />  {/* Cập nhật từ /place/:id thành /listing/:id */}
                       <Route path="/account/orders" element={<OrdersPage />} />
                       <Route path="/account/bookings" element={<BookingsPage />} />

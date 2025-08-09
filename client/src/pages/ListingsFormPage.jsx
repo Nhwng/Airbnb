@@ -15,97 +15,84 @@ const PlacesFormPage = () => {
   const [loading, setLoading] = useState(false);
   const [addedPhotos, setAddedPhotos] = useState([]);
 
+
   const [formData, setFormData] = useState({
     title: '',
-    address: '',
     description: '',
-    perks: [],
-    extraInfo: '',
-    checkIn: '',
-    checkOut: '',
-    maxGuests: 10,
-    price: 500,
+    currency: 'USD',
+    nightly_price: '',
+    person_capacity: 1,
+    room_type: '',
+    latitude: '',
+    longitude: '',
+    city: '',
   });
 
   const {
     title,
-    address,
     description,
-    perks,
-    extraInfo,
-    checkIn,
-    checkOut,
-    maxGuests,
-    price,
+    currency,
+    nightly_price,
+    person_capacity,
+    room_type,
+    latitude,
+    longitude,
+    city,
   } = formData;
 
   const isValidPlaceData = () => {
     if (title.trim() === '') {
       toast.error("Title can't be empty!");
       return false;
-    } else if (address.trim() === '') {
-      toast.error("Address can't be empty!");
-      return false;
-    } else if (addedPhotos.length < 5) {
-      toast.error('Upload at least 5 photos!');
-      return false;
     } else if (description.trim() === '') {
       toast.error("Description can't be empty!");
       return false;
-    } else if (maxGuests < 1) {
-      toast.error('At least one guests is required!');
+    } else if (!currency) {
+      toast.error('Currency is required!');
       return false;
-    } else if (maxGuests > 10) {
-      toast.error("Max. guests can't be greater than 10");
+    } else if (!nightly_price || isNaN(nightly_price)) {
+      toast.error('Nightly price must be a number!');
+      return false;
+    } else if (!person_capacity || isNaN(person_capacity) || person_capacity < 1) {
+      toast.error('Person capacity must be at least 1!');
+      return false;
+    } else if (!room_type) {
+      toast.error('Room type is required!');
+      return false;
+    } else if (!latitude || isNaN(latitude)) {
+      toast.error('Latitude must be a number!');
+      return false;
+    } else if (!longitude || isNaN(longitude)) {
+      toast.error('Longitude must be a number!');
+      return false;
+    } else if (!city) {
+      toast.error('City is required!');
       return false;
     }
-
     return true;
   };
 
   const handleFormData = (e) => {
-    const { name, value, type } = e.target;
-    // If the input is not a checkbox, update 'formData' directly
-    if (type !== 'checkbox') {
-      setFormData({ ...formData, [name]: value });
-      return;
-    }
-
-    // If type is checkbox (perks)
-    if (type === 'checkbox') {
-      const currentPerks = [...perks];
-      let updatedPerks = [];
-
-      // Check if the perk is already in perks array
-      if (currentPerks.includes(name)) {
-        updatedPerks = currentPerks.filter((perk) => perk !== name);
-      } else {
-        updatedPerks = [...currentPerks, name];
-      }
-      setFormData({ ...formData, perks: updatedPerks });
-    }
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   useEffect(() => {
-    if (!id) {
-      return;
-    }
+    if (!id) return;
     setLoading(true);
-    axiosInstance.get(`/places/${id}`).then((response) => {
-      const { place } = response.data;
-      // update the state of formData
-      for (let key in formData) {
-        if (place.hasOwnProperty(key)) {
-          setFormData((prev) => ({
-            ...prev,
-            [key]: place[key],
-          }));
-        }
-      }
-
-      // update photos state separately
-      setAddedPhotos([...place.photos]);
-
+    axiosInstance.get(`/listings/${id}`).then((response) => {
+      const listing = response.data;
+      setFormData({
+        title: listing.title || '',
+        description: listing.description || '',
+        currency: listing.currency || 'USD',
+        nightly_price: listing.nightly_price || '',
+        person_capacity: listing.person_capacity || 1,
+        room_type: listing.room_type || '',
+        latitude: listing.latitude || '',
+        longitude: listing.longitude || '',
+        city: listing.city || '',
+      });
       setLoading(false);
     });
   }, [id]);
@@ -119,116 +106,146 @@ const PlacesFormPage = () => {
     );
   };
 
+
   const savePlace = async (e) => {
     e.preventDefault();
-
     const formDataIsValid = isValidPlaceData();
-    // console.log(isValidPlaceData());
-    const placeData = { ...formData, addedPhotos };
-
-    // Make API call only if formData is valid
     if (formDataIsValid) {
-      if (id) {
-        // update existing place
-        const { data } = await axiosInstance.put('/places/update-place', {
-          id,
-          ...placeData,
-        });
-      } else {
-        // new place
-        const { data } = await axiosInstance.post(
-          '/places/add-places',
-          placeData,
-        );
+      try {
+        if (id) {
+          await axiosInstance.put('/listings/update', {
+            id,
+            ...formData,
+          });
+        } else {
+          await axiosInstance.post('/listings/add', formData);
+        }
+        toast.success('Lưu phòng thành công!');
+        setRedirect(true);
+      } catch (error) {
+        if (error.response && error.response.data && error.response.data.message) {
+          toast.error('Lỗi: ' + error.response.data.message);
+        } else {
+          toast.error('Đã xảy ra lỗi khi lưu phòng!');
+        }
       }
-      setRedirect(true);
     }
   };
 
   if (redirect) {
-    return <Navigate to={'/account/places'} />;
+  return <Navigate to={'/account/listings'} />;
   }
 
   if (loading) {
     return <Spinner />;
   }
 
+  // Hàm điền dữ liệu mẫu
+  const fillWithSample = () => {
+    setFormData({
+      title: 'Saigon Alley Home • check-in 24/7 • Netflix',
+      description: 'Saigon Alley Home is on a peaceful alley reflected how Vietnamese local life is. The home is fully equipped and suitable for both short and long stays.',
+      currency: 'VND',
+      nightly_price: 651983,
+      person_capacity: 2,
+      room_type: 'Private room',
+      latitude: 10.7869982,
+      longitude: 106.6787041,
+      city: 'Ho Chi Minh City',
+    });
+    toast.info('Đã điền dữ liệu mẫu!');
+  };
+
   return (
     <div className="p-4">
       <AccountNav />
+      <button
+        type="button"
+        className="mb-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 font-semibold"
+        onClick={fillWithSample}
+      >
+        Dùng mẫu
+      </button>
       <form onSubmit={savePlace}>
-        {preInput(
-          'Title',
-          'title for your place. Should be short and catchy as in advertisement',
-        )}
+        {preInput('Title', 'Title for your room. Should be short and catchy.')}
         <input
           type="text"
           name="title"
           value={title}
           onChange={handleFormData}
-          placeholder="title, for example: My lovely apt"
+          placeholder="e.g. Cozy Apartment in City Center"
         />
 
-        {preInput('Address', 'address to this place')}
-        <input
-          type="text"
-          name="address"
-          value={address}
-          onChange={handleFormData}
-          placeholder="address"
-        />
-
-        {preInput('Photos', 'more = better')}
-
-        <PhotosUploader
-          addedPhotos={addedPhotos}
-          setAddedPhotos={setAddedPhotos}
-        />
-
-        {preInput('Description', 'discription of the place')}
+        {preInput('Description', 'Description of the room')}
         <textarea
           value={description}
           name="description"
           onChange={handleFormData}
         />
 
-        {preInput('Perks', ' select all the perks of your place')}
-        <Perks selected={perks} handleFormData={handleFormData} />
-
-        {preInput('Extra info', 'house rules, etc ')}
-        <textarea
-          value={extraInfo}
-          name="extraInfo"
+        {preInput('Currency', 'Currency for nightly price (e.g. USD, VND)')}
+        <input
+          type="text"
+          name="currency"
+          value={currency}
           onChange={handleFormData}
+          placeholder="USD"
         />
 
-        {preInput(
-          'Number of guests & Price',
-          // 'add check in and out times, remember to have some time window forcleaning the room between guests. '
-          'Specify the maximum number of guests so that the client stays within the limit.',
-        )}
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-          <div>
-            <h3 className="mt-2 -mb-1">Max no. of guests</h3>
-            <input
-              type="text"
-              name="maxGuests"
-              value={maxGuests}
-              onChange={handleFormData}
-              placeholder="1"
-            />
-          </div>
-          <div>
-            <h3 className="mt-2 -mb-1">Price per night</h3>
-            <input
-              type="number"
-              name="price"
-              value={price}
-              onChange={handleFormData}
-              placeholder="1"
-            />
-          </div>
-        </div>
+        {preInput('Nightly Price', 'Price per night')}
+        <input
+          type="number"
+          name="nightly_price"
+          value={nightly_price}
+          onChange={handleFormData}
+          placeholder="e.g. 500"
+        />
+
+        {preInput('Person Capacity', 'Maximum number of guests')}
+        <input
+          type="number"
+          name="person_capacity"
+          value={person_capacity}
+          onChange={handleFormData}
+          placeholder="e.g. 4"
+        />
+
+        {preInput('Room Type', 'Type of room (e.g. Apartment, House, Studio)')}
+        <input
+          type="text"
+          name="room_type"
+          value={room_type}
+          onChange={handleFormData}
+          placeholder="e.g. Apartment"
+        />
+
+        {preInput('Latitude', 'Latitude of the location')}
+        <input
+          type="number"
+          name="latitude"
+          value={latitude}
+          onChange={handleFormData}
+          placeholder="e.g. 21.0285"
+        />
+
+        {preInput('Longitude', 'Longitude of the location')}
+        <input
+          type="number"
+          name="longitude"
+          value={longitude}
+          onChange={handleFormData}
+          placeholder="e.g. 105.8542"
+        />
+
+        {preInput('City', 'City where the room is located')}
+        <input
+          type="text"
+          name="city"
+          value={city}
+          onChange={handleFormData}
+          placeholder="e.g. Hanoi"
+        />
+
         <button className="mx-auto my-4 flex rounded-full bg-rose-600 hover:bg-rose-700 transition-colors py-3 px-20 text-xl font-semibold text-white">
           Save
         </button>

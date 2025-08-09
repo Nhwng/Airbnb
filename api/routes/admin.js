@@ -4,6 +4,10 @@ const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Order = require('../models/Order');
 const { isAdmin } = require('../middlewares/admin');
+const { getHostRequests } = require('../controllers/adminController');
+
+// Lấy danh sách user có yêu cầu làm host
+router.get('/host-requests', isAdmin, getHostRequests);
 
 // Get dashboard statistics
 router.get('/dashboard', isAdmin, async (req, res) => {

@@ -68,6 +68,14 @@ export const Header = () => {
               Admin
             </Link>
           )}
+          {user && user.role === 'guest' && (
+            <Link
+              to="/become-host"
+              className="hidden md:flex items-center gap-1 px-3 py-2 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors text-sm font-medium"
+            >
+              Become a host
+            </Link>
+          )}
           <Link
             to={user ? '/account' : '/login'}
             className="w-50 flex h-full items-center gap-2 rounded-full border-gray-300 py-1 px-2 md:border"

@@ -1,3 +1,4 @@
+import HostRequestsAdmin from '@/components/admin/HostRequestsAdmin';
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks';
@@ -29,6 +30,8 @@ const AdminPage = () => {
         return <TransactionManagementModule />;
       case 'statistics':
         return <StatisticsManagementModule />;
+      case 'hostRequests':
+        return <HostRequestsAdmin />;
       default:
         return <SystemSettingsModule />;
     }
