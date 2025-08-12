@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useListings } from '../../hooks';      // Thay 'usePlaces' thành 'useListing'
+import { useListings } from '../../hooks';
 import axiosInstance from '@/utils/axios';
 
 import Spinner from '@/components/ui/Spinner';
@@ -16,7 +16,7 @@ const IndexPage = () => {
   const [catalog, setCatalog] = useState({ cities: [], homeTypes: [] });
   const [catalogLoading, setCatalogLoading] = useState(true);
 
-  // --- Tab state: 'cities' hoặc 'homeTypes' ---
+  // --- Tab state: 'cities' hoặc 'accommodationTypes' ---
   const [activeSection, setActiveSection] = useState('cities');
 
   // --- Filter state ---
@@ -77,7 +77,80 @@ const IndexPage = () => {
 
   return (
     <div className="min-h-screen pt-20">
-      {/* === Filter Bar === */}
+      {/* === Catalog with Tabs (Moved to top) === */}
+      <div className="container mx-auto py-8">
+        <h2 className="text-2xl font-bold mb-4">Popular with travelers from Vietnam</h2>
+
+        {/* Tab Buttons */}
+        <div className="flex mb-6 space-x-2">
+          <button
+            onClick={() => setActiveSection('cities')}
+            className={`
+              px-4 py-2 rounded-lg
+              ${activeSection === 'cities'
+                ? 'bg-white border border-blue-500 text-blue-500'
+                : 'bg-gray-100 text-gray-600 hover:text-blue-500'}
+            `}
+          >
+            Cities
+          </button>
+          <button
+            onClick={() => setActiveSection('accommodationTypes')}
+            className={`
+              px-4 py-2 rounded-lg
+              ${activeSection === 'accommodationTypes'
+                ? 'bg-white border border-blue-500 text-blue-500'
+                : 'bg-gray-100 text-gray-600 hover:text-blue-500'}
+            `}
+          >
+            Accommodation Types
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeSection === 'cities' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {catalog.cities.map(city => (
+              <CatalogItem
+                key={city._id}
+                name={city.name}
+                image={city.image}
+              />
+            ))}
+          </div>
+        )}
+
+        {activeSection === 'accommodationTypes' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
+            {catalog.homeTypes.map(type => (
+              <div
+                key={type._id}
+                className="relative group"
+              >
+                <CatalogItem
+                  name={type.name === 'Room Types' ? 'Room' : 'Entire Place'}
+                  image={type.image || type.subtypes[0]?.image} // Sử dụng image của subtype đầu tiên nếu không có image cho parent
+                />
+                {type.subtypes && type.subtypes.length > 0 && (
+                  <div className="absolute top-full left-0 w-full hidden group-hover:block bg-white shadow-lg rounded-lg p-2 z-50">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {type.subtypes.map(subtype => (
+                        <CatalogItem
+                          key={subtype._id}
+                          name={subtype.name}
+                          image={subtype.image}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* === Filter Bar (Moved below catalog) === */}
       <FilterBar 
         onFiltersChange={setFilters}
         initialFilters={filters}
@@ -107,62 +180,6 @@ const IndexPage = () => {
           <div className="text-center py-8">
             <div className="text-gray-500 text-lg mb-2">No places match your search</div>
             <div className="text-gray-400 text-sm">Try adjusting your filters to see more results</div>
-          </div>
-        )}
-      </div>
-
-      {/* === Catalog with Tabs === */}
-      <div className="container mx-auto py-8">
-        <h2 className="text-2xl font-bold mb-4">Popular with travelers from Vietnam</h2>
-
-        {/* Tab Buttons */}
-        <div className="flex mb-6 space-x-2">
-          <button
-            onClick={() => setActiveSection('cities')}
-            className={`
-              px-4 py-2 rounded-lg
-              ${activeSection === 'cities'
-                ? 'bg-white border border-blue-500 text-blue-500'
-                : 'bg-gray-100 text-gray-600 hover:text-blue-500'}
-            `}
-          >
-            Cities
-          </button>
-          <button
-            onClick={() => setActiveSection('homeTypes')}
-            className={`
-              px-4 py-2 rounded-lg
-              ${activeSection === 'homeTypes'
-                ? 'bg-white border border-blue-500 text-blue-500'
-                : 'bg-gray-100 text-gray-600 hover:text-blue-500'}
-            `}
-          >
-            Home Types
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        {activeSection === 'cities' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {catalog.cities.map(city => (
-              <CatalogItem
-                key={city._id}
-                name={city.name}
-                image={city.image}
-              />
-            ))}
-          </div>
-        )}
-
-        {activeSection === 'homeTypes' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {catalog.homeTypes.map(type => (
-              <CatalogItem
-                key={type._id}
-                name={type.name}
-                image={type.image}
-              />
-            ))}
           </div>
         )}
       </div>
