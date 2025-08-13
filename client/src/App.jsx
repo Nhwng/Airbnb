@@ -29,6 +29,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { getItemFromLocalStorage } from './utils';
 import NotFoundPage from './pages/NotFoundPage';
 import VerifyPinPage from './pages/VerifyPinPage';
+import BecomeHostPage from './pages/BecomeHostPage';
 
 import DataSyncPage from './pages/DataSyncPage';
 function App() {
@@ -56,6 +57,7 @@ function App() {
                       <Route path="/account/listings/new" element={<ListingsFormPage />} />  {/* Cập nhật từ /places/new thành /listings/new */}
                       <Route path="/account/listings/:id" element={<ListingsFormPage />} />
                       <Route path="/account/listings/:id/edit" element={<ListingsFormPage />} />
+                      <Route path="/become-host" element={<BecomeHostPage />} />
                       <Route path="/listing/:id" element={<ListingPage />} />  {/* Cập nhật từ /place/:id thành /listing/:id */}
                       <Route path="/account/orders" element={<OrdersPage />} />
                       <Route path="/account/bookings" element={<BookingsPage />} />
