@@ -21,6 +21,8 @@ const {
 
 router.route('/').get(getListings);
 router.route('/catalog').get(getCatalog);
+router.route('/homepage-listings').get(getListings); // Homepage listings endpoint
+router.route('/search').get(searchListings); // Advanced search endpoint
 // Protected routes (user must be logged in)
 router.route('/add').post(isLoggedIn, addListing);
 router.route('/user-listings').get(isLoggedIn, userListings);

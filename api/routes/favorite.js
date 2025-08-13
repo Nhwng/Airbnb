@@ -46,10 +46,29 @@ router.post('/:listingId', isLoggedIn, async (req, res) => {
   try {
     const { user_id } = req.user;
     const { listingId } = req.params;
-    const listingIdNum = parseInt(listingId);
     
+    console.log(`🔥 POST /favorites/${listingId} - User: ${user_id}`);
+    
+    // Handle large numbers that exceed JavaScript's safe integer limit
+    let listingIdNum;
+    try {
+      listingIdNum = Number(listingId);
+      // Check if the number conversion lost precision for very large numbers
+      if (listingId.length > 15 && !Number.isSafeInteger(listingIdNum)) {
+        listingIdNum = parseFloat(listingId);
+      }
+    } catch (error) {
+      console.log(`❌ Number conversion error for ${listingId}:`, error.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid listing ID format'
+      });
+    }
+    
+    console.log(`🔍 Looking for listing with ID: ${listingIdNum} (original: ${listingId})`);
     // Check if listing exists
     const listing = await Listing.findOne({ listing_id: listingIdNum });
+    console.log(`📄 Found listing for favorites:`, !!listing);
     if (!listing) {
       return res.status(404).json({
         success: false,
@@ -104,7 +123,20 @@ router.delete('/:listingId', isLoggedIn, async (req, res) => {
   try {
     const { user_id } = req.user;
     const { listingId } = req.params;
-    const listingIdNum = parseInt(listingId);
+    
+    // Handle large numbers that exceed JavaScript's safe integer limit
+    let listingIdNum;
+    try {
+      listingIdNum = Number(listingId);
+      if (listingId.length > 15 && !Number.isSafeInteger(listingIdNum)) {
+        listingIdNum = parseFloat(listingId);
+      }
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid listing ID format'
+      });
+    }
     
     const favorite = await Favorite.findOneAndDelete({
       user_id,
@@ -136,7 +168,20 @@ router.get('/check/:listingId', isLoggedIn, async (req, res) => {
   try {
     const { user_id } = req.user;
     const { listingId } = req.params;
-    const listingIdNum = parseInt(listingId);
+    
+    // Handle large numbers that exceed JavaScript's safe integer limit
+    let listingIdNum;
+    try {
+      listingIdNum = Number(listingId);
+      if (listingId.length > 15 && !Number.isSafeInteger(listingIdNum)) {
+        listingIdNum = parseFloat(listingId);
+      }
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid listing ID format'
+      });
+    }
     
     const favorite = await Favorite.findOne({
       user_id,

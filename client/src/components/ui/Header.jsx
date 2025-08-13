@@ -24,7 +24,7 @@ export const Header = () => {
 
     // hide searchbar based on url
     if (location.pathname === '/') {
-      setShowSearchBar(true);
+      setShowSearchBar(false); // Temporarily disable header search on homepage
     } else {
       setShowSearchBar(false);
     }

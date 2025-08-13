@@ -145,33 +145,112 @@ export const useListings = () => {
     return useContext(ListingContext);
 };
 
+// Hook for homepage optimized listings
+export const useHomePageListings = (initialLimit = 12) => {
+    const [featuredListings, setFeaturedListings] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFeaturedListings = async () => {
+            try {
+                // Fetch only a limited number of listings for homepage with images
+                const { data } = await axiosInstance.get(`/listings?limit=${initialLimit}&featured=true&withImages=true`);
+                setFeaturedListings(data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching featured listings:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchFeaturedListings();
+    }, [initialLimit]);
+
+    return { featuredListings, loading };
+};
+
 export const useProvideListings = () => {
     const [listings, setListings] = useState([]);
     const [images, setImages] = useState({});
     const [loading, setLoading] = useState(true);
+    const [isSearching, setIsSearching] = useState(false);
 
-    const getListings = async () => {
+    // Optimized to load only listings with images for better UX
+    const getListings = async (limit = 20) => {
         try {
-            const { data: listingsData } = await axiosInstance.get('/listings');
+            setLoading(true);
+            // Only fetch listings with images for better user experience
+            const { data: listingsData } = await axiosInstance.get(`/listings?limit=${limit}&withImages=true`);
             setListings(listingsData);
-            
-            // Lấy ảnh cho từng listing
-            for (const listing of listingsData) {
-                try {
-                    const { data: imagesData } = await axiosInstance.get(`/images/${listing.listing_id}`);
-                    setImages((prevImages) => ({
-                        ...prevImages,
-                        [listing.listing_id]: imagesData,
-                    }));
-                } catch (imgError) {
-                    console.warn('Error fetching images for listing:', listing.listing_id, imgError);
-                }
-            }
             setLoading(false);
         } catch (error) {
             console.error('Error fetching listings:', error);
             setLoading(false);
         }
+    };
+
+    // Load images for specific listings when needed (lazy loading)
+    const loadImagesForListings = async (listingIds) => {
+        const promises = listingIds.map(async (listingId) => {
+            if (!images[listingId]) {
+                try {
+                    const { data: imagesData } = await axiosInstance.get(`/images/${listingId}`);
+                    setImages(prev => ({
+                        ...prev,
+                        [listingId]: imagesData,
+                    }));
+                } catch (error) {
+                    console.warn('Error fetching images for listing:', listingId, error);
+                }
+            }
+        });
+        await Promise.all(promises);
+    };
+
+    // Load more listings for infinite scroll or pagination
+    const loadMoreListings = async (offset = 0, limit = 20) => {
+        try {
+            const { data: moreListings } = await axiosInstance.get(`/listings?offset=${offset}&limit=${limit}&withImages=true`);
+            setListings(prev => [...prev, ...moreListings]);
+            return moreListings;
+        } catch (error) {
+            console.error('Error loading more listings:', error);
+            return [];
+        }
+    };
+
+    // Search listings with filters
+    const searchListings = async (filters) => {
+        try {
+            setIsSearching(true);
+            setLoading(true);
+            const searchParams = new URLSearchParams();
+            
+            if (filters.city) searchParams.append('city', filters.city);
+            if (filters.priceRange) {
+                searchParams.append('minPrice', filters.priceRange[0]);
+                searchParams.append('maxPrice', filters.priceRange[1]);
+            }
+            if (filters.guests) searchParams.append('guests', filters.guests);
+            if (filters.homeType) searchParams.append('roomType', filters.homeType);
+            // Only search listings with images
+            searchParams.append('withImages', 'true');
+            
+            const { data: searchResults } = await axiosInstance.get(`/listings/search?${searchParams}`);
+            setListings(searchResults);
+            setLoading(false);
+            return searchResults;
+        } catch (error) {
+            console.error('Error searching listings:', error);
+            setLoading(false);
+            return [];
+        }
+    };
+
+    // Reset to initial state
+    const resetToDefault = () => {
+        setIsSearching(false);
+        getListings();
     };
 
     useEffect(() => {
@@ -183,7 +262,12 @@ export const useProvideListings = () => {
         setListings,
         images,
         loading,
+        isSearching,
         setLoading,
+        loadImagesForListings,
+        loadMoreListings,
+        searchListings,
+        resetToDefault,
     };
 };
 
