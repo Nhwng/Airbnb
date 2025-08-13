@@ -41,8 +41,13 @@ const AdminPage = () => {
     <div className="min-h-screen bg-gray-50 flex">
       <AdminSidebar activeModule={activeModule} setActiveModule={setActiveModule} />
       
-      <div className="flex-1">
-        <div className="p-8">
+
+      <div className="flex-1 pt-20">
+        {/* 
+          Giới hạn max-width, canh giữa với mx-auto, và
+          padding chỉ ở trong container con
+        */}
+        <div className="max-w-5xl w-full mx-auto p-8">
           {renderModule()}
         </div>
       </div>
