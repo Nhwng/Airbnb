@@ -181,33 +181,25 @@ exports.getListings = async (req, res) => {
       })
     );
 
-    // CRITICAL FIX: Filter out listings that can't be queried directly
-    // This solves the 404 issue by only returning listings that actually exist
-    console.log('🔧 Filtering listings to only include queryable ones...');
-    const validListings = [];
-    const maxValidListings = Number(limit); // Stop when we have enough valid listings
+    // Filter listings based on image requirement only
+    console.log('🔧 Filtering listings based on image requirements...');
+    let validListings = listingsWithImages;
     
-    for (const listing of listingsWithImages) {
-      if (validListings.length >= maxValidListings) {
-        break; // Stop when we have enough valid listings
-      }
-      
-      // Check if listing can be queried directly
-      const testListing = await Listing.findOne({ listing_id: listing.listing_id });
-      if (!testListing) {
-        console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title?.substring(0, 40)} (not queryable)`);
-        continue;
-      }
-      
-      // Check if listing has images (if withImages filter is enabled)
-      if (withImages === 'true' && !listing.firstImage) {
-        console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title?.substring(0, 40)} (no images)`);
-        continue;
-      }
-      
-      validListings.push(listing);
-      console.log(`✅ Including listing ${listing.listing_id}: ${listing.title?.substring(0, 40)}`);
+    // Apply image filtering if required
+    if (withImages === 'true') {
+      validListings = listingsWithImages.filter(listing => {
+        const hasImage = listing.firstImage && listing.firstImage.url;
+        if (!hasImage) {
+          console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title?.substring(0, 40)} (no images)`);
+          return false;
+        }
+        console.log(`✅ Including listing ${listing.listing_id}: ${listing.title?.substring(0, 40)}`);
+        return true;
+      });
     }
+    
+    // Limit results
+    validListings = validListings.slice(0, Number(limit));
     
     console.log(`📊 Filtered ${listingsWithImages.length} -> ${validListings.length} valid listings (target: ${limit})`);
 
@@ -400,33 +392,22 @@ exports.searchListings = async (req, res) => {
 
     let searchMatches = await Listing.aggregate(pipeline);
     
-    // Apply same validation filtering as homepage to ensure data integrity
+    // Apply image filtering if required
     if (withImages === 'true') {
-      console.log('🔧 Filtering search results to only include queryable listings...');
-      const validListings = [];
-      
-      for (const listing of searchMatches) {
-        try {
-          // Test if listing can be queried directly
-          const testListing = await Listing.findOne({ listing_id: listing.listing_id });
-          if (testListing) {
-            validListings.push(listing);
-            console.log(`✅ Including listing ${listing.listing_id}: ${listing.title}`);
-          } else {
-            console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title} (not queryable)`);
-          }
-        } catch (error) {
-          console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title} (query error)`);
+      console.log('🔧 Filtering search results to only include listings with images...');
+      const validListings = searchMatches.filter(listing => {
+        // Check if listing has images in the aggregation result
+        const hasImages = listing.imageCount > 0 || listing.hasImages;
+        if (!hasImages) {
+          console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title} (no images)`);
+          return false;
         }
-        
-        // Stop when we have enough valid listings
-        if (validListings.length >= Number(limit)) {
-          break;
-        }
-      }
+        console.log(`✅ Including listing ${listing.listing_id}: ${listing.title}`);
+        return true;
+      });
       
       console.log(`📊 Search filtered ${searchMatches.length} -> ${validListings.length} valid listings (target: ${limit})`);
-      searchMatches = validListings;
+      searchMatches = validListings.slice(0, Number(limit));
     }
 
     res.status(200).json(searchMatches);
