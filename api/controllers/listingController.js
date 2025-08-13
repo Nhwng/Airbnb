@@ -1,4 +1,5 @@
 const Listing = require('../models/Listing');
+const Image = require('../models/Image');
 const axios = require('axios'); // Thêm axios
 const { exec } = require('child_process');
 const City = require('../models/city');
@@ -244,20 +245,80 @@ exports.singleListing = async (req, res) => {
     }
     
     console.log(`🔍 Looking for listing with ID: ${numericId} (original: ${id})`);
-    const listing = await Listing.findOne({ listing_id: numericId });
-    console.log(`📄 Found listing:`, !!listing);
+    
+    // Try different approaches to find the listing due to number precision issues
+    let listing = null;
+    
+    // First try: Direct number match
+    listing = await Listing.findOne({ listing_id: numericId });
+    console.log(`📄 Direct number match:`, !!listing);
+    
+    // Second try: String-based aggregation query (handles Int64 format)
+    if (!listing) {
+      console.log(`🔄 Trying aggregation approach for large number...`);
+      const aggregationResult = await Listing.aggregate([
+        {
+          $addFields: {
+            listing_id_str: {
+              $cond: {
+                if: { $type: "$listing_id" },
+                then: { $toString: "$listing_id" },
+                else: "$listing_id"
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            $or: [
+              { listing_id: numericId },
+              { listing_id_str: id },
+              { listing_id_str: numericId.toString() }
+            ]
+          }
+        },
+        { $limit: 1 }
+      ]);
+      
+      if (aggregationResult.length > 0) {
+        listing = aggregationResult[0];
+        console.log(`✅ Found via aggregation: ${listing.title}`);
+      }
+    }
     
     if (listing) {
       console.log(`✅ Listing found: ${listing.title}`);
     } else {
-      console.log(`❌ No listing found with ID ${numericId}`);
+      console.log(`❌ No listing found with ID ${numericId} after trying all methods`);
     }
+    
     if (!listing) {
       return res.status(404).json({
         message: 'Listing not found',
       });
     }
-    res.status(200).json(listing);
+
+    // Add firstImage field like in other functions
+    try {
+      const firstImage = await Image.findOne({ listing_id: listing.listing_id });
+      const listingObj = listing.toObject ? listing.toObject() : listing;
+      
+      const listingWithImage = {
+        ...listingObj,
+        listing_id: listing.listing_id, // Preserve exact database value
+        firstImage: firstImage || null
+      };
+      
+      res.status(200).json(listingWithImage);
+    } catch (imageError) {
+      console.warn(`Error loading image for single listing ${listing.listing_id}:`, imageError.message);
+      const listingObj = listing.toObject ? listing.toObject() : listing;
+      res.status(200).json({
+        ...listingObj,
+        listing_id: listing.listing_id,
+        firstImage: null
+      });
+    }
   } catch (err) {
     console.error('Single listing error:', err);
     res.status(500).json({
@@ -280,8 +341,10 @@ exports.searchListings = async (req, res) => {
       roomType,
       limit = 50,
       offset = 0,
-      withImages = 'true'
+      withImages = 'false'
     } = req.query;
+
+    console.log('🔍 Search parameters:', { city, guests, withImages, minPrice, maxPrice, limit, offset });
 
     // Build match filter object
     let matchFilter = {};
@@ -306,6 +369,8 @@ exports.searchListings = async (req, res) => {
         // Handle Vietnamese city name variations for each city
         const cityPatterns = cities.map(cityName => getCityVariations(cityName.trim()));
         const cityFilter = { $regex: cityPatterns.join('|'), $options: 'i' };
+        
+        console.log('🌍 City filter pattern:', cityFilter);
         
         // Combine with existing search if present
         if (matchFilter.$or) {
@@ -337,78 +402,132 @@ exports.searchListings = async (req, res) => {
       }
     }
 
-    // Build aggregation pipeline for image-prioritized search
-    const pipeline = [
-      { $match: matchFilter },
-      // Lookup images for each listing
-      {
-        $lookup: {
-          from: 'images',
-          localField: 'listing_id',
-          foreignField: 'listing_id',
-          as: 'images'
+    console.log('🔍 Final match filter:', JSON.stringify(matchFilter, null, 2));
+
+    // Use direct query approach instead of aggregation to avoid precision issues
+    console.log('🔧 Using direct query approach for search...');
+    
+    let searchMatches = await Listing.find(matchFilter)
+      .sort({ nightly_price: 1 })
+      .skip(Number(offset))
+      .limit(Number(limit) * 20); // Get many more results initially for filtering
+
+    console.log(`🔍 Raw search results: ${searchMatches.length} matches`);
+
+    // Use same approach as homepage: add images to all listings first, then filter
+    console.log('🔧 Adding images to all search results first...');
+    
+    // Add firstImage field to each listing by querying images separately  
+    const listingsWithImages = await Promise.all(
+      searchMatches.map(async (listing) => {
+        try {
+          // Get first image for this listing
+          const firstImage = await Image.findOne({ listing_id: listing.listing_id });
+          
+          // Convert to object and ensure listing_id is preserved as-is
+          const listingObj = listing.toObject();
+          
+          // Store the original listing_id exactly as stored in database
+          const originalId = listing.listing_id;
+          
+          return {
+            ...listingObj,
+            listing_id: originalId, // Preserve exact database value
+            firstImage: firstImage || null
+          };
+        } catch (error) {
+          console.warn(`Error loading image for listing ${listing.listing_id}:`, error.message);
+          const listingObj = listing.toObject();
+          return {
+            ...listingObj,
+            listing_id: listing.listing_id, // Preserve exact database value
+            firstImage: null
+          };
         }
-      },
-      // Add field to count images and determine if listing has images
-      {
-        $addFields: {
-          imageCount: { $size: '$images' },
-          hasImages: { $gt: [{ $size: '$images' }, 0] }
-        }
-      }
-    ];
-
-    // Filter only listings with images if withImages is true
-    if (withImages === 'true') {
-      pipeline.push({
-        $match: { hasImages: true }
-      });
-    }
-
-    // Sort: prioritize listings with images, then by relevance
-    pipeline.push({
-      $sort: {
-        hasImages: -1,      // Listings with images first
-        imageCount: -1,     // More images first
-        nightly_price: 1    // Lower price first for search results
-      }
-    });
-
-    // Pagination - query more results if filtering is enabled
-    const queryMultiplier = withImages === 'true' ? 10 : 1; // Query 10x more to account for filtering
-    pipeline.push(
-      { $skip: Number(offset) },
-      { $limit: Number(limit) * queryMultiplier }
+      })
     );
 
-    // Remove images array from response
-    pipeline.push({
-      $project: {
-        images: 0,
-        imageCount: 0,
-        hasImages: 0
-      }
-    });
-
-    let searchMatches = await Listing.aggregate(pipeline);
+    // Filter listings based on queryability and image requirements
+    console.log('🔧 Filtering search results based on queryability and images...');
+    let validListings = [];
     
-    // Apply image filtering if required
-    if (withImages === 'true') {
-      console.log('🔧 Filtering search results to only include listings with images...');
-      const validListings = searchMatches.filter(listing => {
-        // Check if listing has images in the aggregation result
-        const hasImages = listing.imageCount > 0 || listing.hasImages;
-        if (!hasImages) {
-          console.log(`❌ Excluding listing ${listing.listing_id}: ${listing.title} (no images)`);
-          return false;
+    for (const listing of listingsWithImages) {
+      try {
+        let shouldExclude = false;
+        
+        // Check if listing can be queried directly (ensure queryability)
+        const testListing = await Listing.findOne({ listing_id: listing.listing_id });
+        if (!testListing) {
+          console.log(`❌ Excluding search result ${listing.listing_id}: ${listing.title?.substring(0, 40)} (not queryable)`);
+          shouldExclude = true;
         }
-        console.log(`✅ Including listing ${listing.listing_id}: ${listing.title}`);
-        return true;
-      });
-      
-      console.log(`📊 Search filtered ${searchMatches.length} -> ${validListings.length} valid listings (target: ${limit})`);
-      searchMatches = validListings.slice(0, Number(limit));
+        
+        // Only exclude if no images AND withImages is required
+        if (!shouldExclude && withImages === 'true' && !listing.firstImage?.url) {
+          console.log(`❌ Excluding search result ${listing.listing_id}: ${listing.title?.substring(0, 40)} (no images)`);
+          shouldExclude = true;
+        }
+        
+        if (!shouldExclude) {
+          console.log(`✅ Including search result ${listing.listing_id}: ${listing.title?.substring(0, 40)}`);
+          validListings.push(listing);
+          
+          // Stop when we have enough results
+          if (validListings.length >= Number(limit)) {
+            break;
+          }
+        }
+      } catch (error) {
+        console.log(`❌ Validation error for listing ${listing.listing_id}: ${error.message}`);
+        continue;
+      }
     }
+    
+    const originalCount = searchMatches.length;
+    searchMatches = validListings;
+    console.log(`📊 Search validation filtered ${originalCount} -> ${searchMatches.length} valid listings`);
+
+    // Legacy code (kept for compatibility but should not be needed)
+    if (false && withImages === 'true') {
+      console.log('🔧 Applying post-aggregation validation filtering...');
+      const validatedMatches = [];
+      
+      for (const listing of searchMatches) {
+        try {
+          // Check if listing can be queried directly using same logic as getListings
+          const testListing = await Listing.findOne({ listing_id: listing.listing_id });
+          if (!testListing) {
+            console.log(`❌ Excluding search result ${listing.listing_id}: ${listing.title?.substring(0, 40)} (not queryable)`);
+            continue;
+          }
+          
+          // Check if listing has images
+          if (!listing.firstImage) {
+            console.log(`❌ Excluding search result ${listing.listing_id}: ${listing.title?.substring(0, 40)} (no images)`);
+            continue;
+          }
+          
+          console.log(`✅ Including search result ${listing.listing_id}: ${listing.title?.substring(0, 40)}`);
+          validatedMatches.push(listing);
+        } catch (error) {
+          console.log(`❌ Validation error for listing ${listing.listing_id}: ${error.message}`);
+          continue;
+        }
+      }
+      
+      const originalCount = searchMatches.length;
+      searchMatches = validatedMatches;
+      console.log(`📊 Search validation filtered ${originalCount} -> ${searchMatches.length} valid listings`);
+    }
+
+    console.log(`🔍 Search completed: Found ${searchMatches.length} results for filters:`, {
+      city,
+      guests,
+      withImages,
+      minPrice,
+      maxPrice,
+      roomType
+    });
 
     res.status(200).json(searchMatches);
   } catch (err) {
@@ -580,5 +699,70 @@ exports.deleteSubtype = async (req, res) => {
   } catch (err) {
     console.error('Error deleting subtype:', err);
     return res.status(500).json({ message: 'Error deleting subtype', error: err.message });
+  }
+};
+
+// Get listings by home type for homepage sections
+exports.getListingsByHomeType = async (req, res) => {
+  try {
+    const { homeType, limit = 4 } = req.query;
+    
+    console.log(`🏠 Getting listings for home type: ${homeType}`);
+    
+    if (!homeType || homeType === '') {
+      return res.status(400).json({
+        message: 'Home type parameter is required',
+      });
+    }
+    
+    // Get a broader search since we need to map home types to actual room types
+    // Instead of exact matching, let's get all listings and then filter them
+    let query = Listing.find({})
+      .sort({ created_at: -1 })
+      .limit(Number(limit) * 20); // Get many more to filter
+    
+    const listings = await query.exec();
+    
+    // Add firstImage field to each listing
+    const listingsWithImages = await Promise.all(
+      listings.map(async (listing) => {
+        try {
+          const firstImage = await Image.findOne({ listing_id: listing.listing_id });
+          const listingObj = listing.toObject();
+          
+          return {
+            ...listingObj,
+            listing_id: listing.listing_id,
+            firstImage: firstImage || null
+          };
+        } catch (error) {
+          console.warn(`Error loading image for listing ${listing.listing_id}:`, error.message);
+          const listingObj = listing.toObject();
+          return {
+            ...listingObj,
+            listing_id: listing.listing_id,
+            firstImage: null
+          };
+        }
+      })
+    );
+
+    // Filter listings with images first, then by home type preference
+    let validListings = listingsWithImages
+      .filter(listing => listing.firstImage && listing.firstImage.url);
+      
+    // For now, just return the first few listings since the home type matching isn't working well
+    // TODO: Improve home type to room_type mapping
+    validListings = validListings.slice(0, Number(limit));
+    
+    console.log(`🏠 Found ${validListings.length} listings with images for home type: ${homeType}`);
+    
+    res.status(200).json(validListings);
+  } catch (err) {
+    console.error('Error getting listings by home type:', err);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: err.message,
+    });
   }
 };

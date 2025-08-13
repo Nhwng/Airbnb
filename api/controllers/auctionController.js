@@ -1,0 +1,416 @@
+const AuctionRequest = require('../models/AuctionRequest');
+const Auction = require('../models/Auction');
+const Bid = require('../models/Bid');
+const Listing = require('../models/Listing');
+const User = require('../models/User');
+const Image = require('../models/Image');
+
+// Host submits auction request
+exports.requestAuction = async (req, res) => {
+  try {
+    const userData = req.user;
+    const { listing_id, starting_price, buyout_price } = req.body;
+
+    // Validate required fields
+    if (!listing_id || !starting_price || !buyout_price) {
+      return res.status(400).json({
+        message: 'All fields are required: listing_id, starting_price, buyout_price'
+      });
+    }
+
+    // Validate prices
+    if (starting_price <= 0 || buyout_price <= 0) {
+      return res.status(400).json({
+        message: 'Starting price and buyout price must be greater than 0'
+      });
+    }
+
+    if (buyout_price <= starting_price) {
+      return res.status(400).json({
+        message: 'Buyout price must be higher than starting price'
+      });
+    }
+
+    // Check if listing belongs to the host
+    const listing = await Listing.findOne({ listing_id: listing_id });
+    if (!listing) {
+      return res.status(404).json({
+        message: 'Listing not found'
+      });
+    }
+
+    if (listing.host_id !== userData.user_id) {
+      return res.status(403).json({
+        message: 'You can only request auctions for your own listings'
+      });
+    }
+
+    // Check if there's already a pending request for this listing
+    const existingRequest = await AuctionRequest.findOne({
+      listing_id: listing_id,
+      status: 'pending'
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({
+        message: 'There is already a pending auction request for this listing'
+      });
+    }
+
+    // Create auction request
+    const auctionRequest = new AuctionRequest({
+      listing_id,
+      host_id: userData.user_id,
+      starting_price: Number(starting_price),
+      buyout_price: Number(buyout_price)
+    });
+
+    await auctionRequest.save();
+
+    res.status(201).json({
+      message: 'Auction request submitted successfully',
+      request: auctionRequest
+    });
+
+  } catch (error) {
+    console.error('Request auction error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Get auction requests for host
+exports.getHostAuctionRequests = async (req, res) => {
+  try {
+    const userData = req.user;
+
+    const requests = await AuctionRequest.find({
+      host_id: userData.user_id
+    }).sort({ created_at: -1 });
+
+    res.status(200).json(requests);
+
+  } catch (error) {
+    console.error('Get host auction requests error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Admin: Get all pending auction requests
+exports.getPendingAuctionRequests = async (req, res) => {
+  try {
+    const requests = await AuctionRequest.find({
+      status: 'pending'
+    }).sort({ created_at: -1 });
+
+    // Populate listing and host information
+    const populatedRequests = await Promise.all(
+      requests.map(async (request) => {
+        const listing = await Listing.findOne({ listing_id: request.listing_id });
+        const host = await User.findOne({ user_id: request.host_id });
+        const firstImage = await Image.findOne({ listing_id: request.listing_id });
+
+        return {
+          ...request.toObject(),
+          listing: {
+            title: listing?.title || 'Unknown',
+            city: listing?.city || 'Unknown',
+            nightly_price: listing?.nightly_price || 0,
+            firstImage: firstImage || null
+          },
+          host: {
+            name: host?.name || 'Unknown',
+            email: host?.email || 'Unknown'
+          }
+        };
+      })
+    );
+
+    res.status(200).json(populatedRequests);
+
+  } catch (error) {
+    console.error('Get pending auction requests error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Admin: Approve/Reject auction request
+exports.updateAuctionRequestStatus = async (req, res) => {
+  try {
+    const userData = req.user;
+    const { requestId } = req.params;
+    const { status, admin_notes } = req.body;
+
+    // Check if user is admin
+    if (userData.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Only admins can approve/reject auction requests'
+      });
+    }
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        message: 'Status must be either approved or rejected'
+      });
+    }
+
+    const request = await AuctionRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({
+        message: 'Auction request not found'
+      });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        message: 'Only pending requests can be updated'
+      });
+    }
+
+    // Update request status
+    request.status = status;
+    request.admin_notes = admin_notes || '';
+    request.approved_at = new Date();
+    request.approved_by = userData.user_id;
+    await request.save();
+
+    // If approved, create active auction
+    if (status === 'approved') {
+      // Set auction period - starts from day 15 onwards
+      const auctionStart = new Date();
+      auctionStart.setDate(auctionStart.getDate() + 14); // Start from day 15
+      
+      const auctionEnd = new Date(auctionStart);
+      auctionEnd.setDate(auctionEnd.getDate() + 14); // 2-week auction period
+
+      const auction = new Auction({
+        listing_id: request.listing_id,
+        host_id: request.host_id,
+        auction_start: auctionStart,
+        auction_end: auctionEnd,
+        starting_price: request.starting_price,
+        buyout_price: request.buyout_price,
+        current_bid: request.starting_price
+      });
+
+      await auction.save();
+    }
+
+    res.status(200).json({
+      message: `Auction request ${status} successfully`,
+      request: request
+    });
+
+  } catch (error) {
+    console.error('Update auction request status error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Get active auctions for users
+exports.getActiveAuctions = async (req, res) => {
+  try {
+    const { limit = 20, offset = 0 } = req.query;
+
+    const auctions = await Auction.find({
+      status: 'active',
+      auction_end: { $gt: new Date() }
+    })
+    .sort({ created_at: -1 })
+    .skip(Number(offset))
+    .limit(Number(limit));
+
+    // Populate listing and host information
+    const populatedAuctions = await Promise.all(
+      auctions.map(async (auction) => {
+        const listing = await Listing.findOne({ listing_id: auction.listing_id });
+        const host = await User.findOne({ user_id: auction.host_id });
+        const firstImage = await Image.findOne({ listing_id: auction.listing_id });
+        const bidCount = await Bid.countDocuments({ auction_id: auction._id });
+
+        return {
+          ...auction.toObject(),
+          listing: {
+            title: listing?.title || 'Unknown',
+            description: listing?.description || '',
+            city: listing?.city || 'Unknown',
+            person_capacity: listing?.person_capacity || 1,
+            room_type: listing?.room_type || 'Unknown',
+            firstImage: firstImage || null
+          },
+          host: {
+            name: host?.name || 'Unknown'
+          },
+          bid_count: bidCount,
+          time_remaining: auction.auction_end - new Date()
+        };
+      })
+    );
+
+    res.status(200).json(populatedAuctions);
+
+  } catch (error) {
+    console.error('Get active auctions error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Place a bid on an auction
+exports.placeBid = async (req, res) => {
+  try {
+    const userData = req.user;
+    const { auctionId } = req.params;
+    const { bid_amount } = req.body;
+
+    if (!bid_amount || bid_amount <= 0) {
+      return res.status(400).json({
+        message: 'Bid amount must be greater than 0'
+      });
+    }
+
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({
+        message: 'Auction not found'
+      });
+    }
+
+    // Check if auction is still active
+    if (auction.status !== 'active' || auction.auction_end <= new Date()) {
+      return res.status(400).json({
+        message: 'This auction is no longer active'
+      });
+    }
+
+    // Check if host is trying to bid on own auction
+    if (auction.host_id === userData.user_id) {
+      return res.status(400).json({
+        message: 'You cannot bid on your own auction'
+      });
+    }
+
+    // Check if bid is higher than current bid
+    if (bid_amount <= auction.current_bid) {
+      return res.status(400).json({
+        message: `Bid must be higher than current bid of ${auction.current_bid}₫`
+      });
+    }
+
+    // Create new bid
+    const bid = new Bid({
+      auction_id: auction._id,
+      bidder_id: userData.user_id,
+      bid_amount: Number(bid_amount),
+      is_winning: true
+    });
+
+    // Update previous winning bids
+    await Bid.updateMany(
+      { auction_id: auction._id, is_winning: true },
+      { is_winning: false, status: 'outbid' }
+    );
+
+    await bid.save();
+
+    // Update auction
+    auction.current_bid = Number(bid_amount);
+    auction.highest_bidder = userData.user_id;
+    auction.total_bids += 1;
+    await auction.save();
+
+    res.status(201).json({
+      message: 'Bid placed successfully',
+      bid: bid,
+      auction: {
+        current_bid: auction.current_bid,
+        total_bids: auction.total_bids
+      }
+    });
+
+  } catch (error) {
+    console.error('Place bid error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Get auction details
+exports.getAuctionDetails = async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({
+        message: 'Auction not found'
+      });
+    }
+
+    // Get listing details
+    const listing = await Listing.findOne({ listing_id: auction.listing_id });
+    const host = await User.findOne({ user_id: auction.host_id });
+    const firstImage = await Image.findOne({ listing_id: auction.listing_id });
+
+    // Get bid history
+    const bids = await Bid.find({ auction_id: auction._id })
+      .sort({ bid_time: -1 })
+      .limit(10);
+
+    const populatedBids = await Promise.all(
+      bids.map(async (bid) => {
+        const bidder = await User.findOne({ user_id: bid.bidder_id });
+        return {
+          ...bid.toObject(),
+          bidder: {
+            name: bidder?.name || 'Anonymous'
+          }
+        };
+      })
+    );
+
+    const auctionDetails = {
+      ...auction.toObject(),
+      listing: {
+        title: listing?.title || 'Unknown',
+        description: listing?.description || '',
+        city: listing?.city || 'Unknown',
+        person_capacity: listing?.person_capacity || 1,
+        room_type: listing?.room_type || 'Unknown',
+        latitude: listing?.latitude || 0,
+        longitude: listing?.longitude || 0,
+        firstImage: firstImage || null
+      },
+      host: {
+        name: host?.name || 'Unknown'
+      },
+      bids: populatedBids,
+      time_remaining: auction.auction_end - new Date()
+    };
+
+    res.status(200).json(auctionDetails);
+
+  } catch (error) {
+    console.error('Get auction details error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+

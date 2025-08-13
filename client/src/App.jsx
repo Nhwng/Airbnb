@@ -30,6 +30,7 @@ import { getItemFromLocalStorage } from './utils';
 import NotFoundPage from './pages/NotFoundPage';
 import VerifyPinPage from './pages/VerifyPinPage';
 import BecomeHostPage from './pages/BecomeHostPage';
+import AuctionsPage from './pages/AuctionsPage';
 
 import DataSyncPage from './pages/DataSyncPage';
 function App() {
@@ -65,6 +66,7 @@ function App() {
                       <Route path="/account/bookings/:id" element={<SingleBookedPlace />} />
                       <Route path="/payment/:orderId" element={<PaymentPage />} />
                       <Route path="/payment/callback" element={<PaymentCallbackPage />} />
+                      <Route path="/auctions" element={<AuctionsPage />} />
                       <Route path="/admin" element={<AdminPage />} />
                       <Route path="/datascraper" element={<DataSyncPage />} /> 
                       <Route path="*" element={<NotFoundPage />} />

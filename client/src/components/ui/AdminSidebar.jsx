@@ -5,7 +5,8 @@ import {
   Users, 
   ShoppingCart, 
   BarChart3,
-  ChevronRight
+  ChevronRight,
+  Gavel
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeModule, setActiveModule }) => {
@@ -45,6 +46,15 @@ const AdminSidebar = ({ activeModule, setActiveModule }) => {
       color: 'text-rose-600',
       bgColor: 'bg-rose-50',
       hoverColor: 'hover:bg-rose-100'
+    },
+    {
+      id: 'auctions',
+      label: 'Auction Management',
+      description: 'Approve auction requests',
+      icon: Gavel,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      hoverColor: 'hover:bg-amber-100'
     },
     {
       id: 'transactions',

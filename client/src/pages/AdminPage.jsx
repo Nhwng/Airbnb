@@ -8,6 +8,7 @@ import CatalogManagementModule from '@/components/admin/CatalogManagementModule'
 import CustomerManagementModule from '@/components/admin/CustomerManagementModule';
 import TransactionManagementModule from '@/components/admin/TransactionManagementModule';
 import StatisticsManagementModule from '@/components/admin/StatisticsManagementModule';
+import AuctionManagementModule from '@/components/admin/AuctionManagementModule';
 
 const AdminPage = () => {
   const { user } = useAuth();
@@ -32,6 +33,8 @@ const AdminPage = () => {
         return <StatisticsManagementModule />;
       case 'hostRequests':
         return <HostRequestsAdmin />;
+      case 'auctions':
+        return <AuctionManagementModule />;
       default:
         return <SystemSettingsModule />;
     }

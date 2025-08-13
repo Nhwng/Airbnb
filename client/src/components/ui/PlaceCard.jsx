@@ -6,24 +6,29 @@ import { MapPin, Users, Star } from 'lucide-react';
 
 const DEFAULT_IMAGE_URL = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
 
-// Helper function to extract actual ID from complex MongoDB Int64 format
+// Helper function to extract actual ID - avoid problematic Int64 objects
 const extractListingId = (listing_id) => {
-  if (typeof listing_id === 'object' && listing_id !== null) {
-    if (listing_id.low !== undefined && listing_id.high !== undefined) {
-      // MongoDB Int64 format - handle negative numbers correctly
-      if (listing_id.unsigned === false && listing_id.high < 0) {
-        // Handle negative high values
-        return listing_id.low + (listing_id.high * Math.pow(2, 32));
-      } else {
-        // Handle positive values or unsigned
-        return (listing_id.low >>> 0) + (listing_id.high * Math.pow(2, 32));
-      }
-    } else if (listing_id._id) {
-      return listing_id._id;
-    } else {
-      return listing_id.toString();
-    }
+  // If it's already a simple number or string, use it directly
+  if (typeof listing_id === 'number' || typeof listing_id === 'string') {
+    return listing_id;
   }
+  
+  // For complex MongoDB Int64 objects, return a safe fallback
+  if (typeof listing_id === 'object' && listing_id !== null) {
+    if (listing_id._id) {
+      return listing_id._id;
+    }
+    
+    // For MongoDB Int64 objects (low/high format), return null to prevent 404 errors
+    // These should be filtered out by the backend
+    if (listing_id.low !== undefined && listing_id.high !== undefined) {
+      console.warn('Encountered Int64 object - this should be filtered by backend:', listing_id);
+      return null; // This will prevent Link navigation
+    }
+    
+    return listing_id.toString();
+  }
+  
   return listing_id;
 };
 
@@ -108,6 +113,28 @@ const PlaceCard = ({ place, images }) => {
       setIsLoading(false);
     }
   };
+
+  // Don't render Link if placeId is null (problematic Int64 object)
+  if (placeId === null) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden opacity-50">
+        <div className="relative">
+          <div className="aspect-[4/3] overflow-hidden">
+            <img
+              src={selectedImage?.url || DEFAULT_IMAGE_URL}
+              alt={title}
+              className="w-full h-full object-cover grayscale"
+            />
+          </div>
+          <div className="p-4">
+            <h3 className="font-medium text-gray-400 mb-1 line-clamp-2">{title}</h3>
+            <p className="text-sm text-gray-400 mb-2">{city}</p>
+            <p className="text-sm text-gray-400">Listing unavailable</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link 

@@ -60,6 +60,15 @@ export const Header = () => {
         {showSearchBar && <SearchBar />}
 
         <div className="flex items-center gap-2">
+          <Link
+            to="/auctions"
+            className="hidden md:flex items-center gap-1 px-3 py-2 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2l1.09 3.26L16 2l-1.09 3.26L18 7.27l-3.26 1.09L18 12l-3.26-1.09L18 16.73l-3.26-1.09L16 22l-1.09-3.26L12 22l1.09-3.26L6 22l1.09-3.26L6 16.73l3.26-1.09L6 12l3.26 1.09L6 7.27l3.26 1.09L6 2l1.09 3.26L12 2z"/>
+            </svg>
+            Auctions
+          </Link>
           {user && user.role === 'admin' && (
             <Link
               to="/admin"
