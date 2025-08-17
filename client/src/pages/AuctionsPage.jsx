@@ -106,10 +106,39 @@ const AuctionCard = ({ auction }) => {
           </div>
         </div>
 
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Accommodation Period:</span>
-            <span className="font-medium">{formatDate(auction.start_date)} - {formatDate(auction.end_date)}</span>
+        <div className="space-y-4 mb-4">
+          {/* Auction Timeline */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">🕐 Auction Timeline</h4>
+            <div className="space-y-1 text-xs text-blue-800">
+              <div className="flex justify-between">
+                <span>Auction ends:</span>
+                <span className="font-medium">{formatDate(auction.auction_end)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Time remaining:</span>
+                <span className="font-medium text-red-600">{getTimeRemainingText()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Accommodation Details */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <h4 className="text-sm font-semibold text-green-900 mb-2">🏠 Accommodation Details</h4>
+            <div className="space-y-1 text-xs text-green-800">
+              <div className="flex justify-between">
+                <span>Check-in Date:</span>
+                <span className="font-medium">{auction.check_in_date ? formatDate(auction.check_in_date) : 'Not specified'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Check-out Date:</span>
+                <span className="font-medium">{auction.check_out_date ? formatDate(auction.check_out_date) : 'Not specified'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Stay Duration:</span>
+                <span className="font-medium">{auction.total_nights || 'N/A'} nights</span>
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center justify-between text-sm">

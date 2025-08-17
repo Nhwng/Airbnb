@@ -31,6 +31,9 @@ import NotFoundPage from './pages/NotFoundPage';
 import VerifyPinPage from './pages/VerifyPinPage';
 import BecomeHostPage from './pages/BecomeHostPage';
 import AuctionsPage from './pages/AuctionsPage';
+import AuctionDetailPage from './pages/AuctionDetailPage';
+import AuctionBidPage from './pages/AuctionBidPage';
+import AuctionBuyoutPage from './pages/AuctionBuyoutPage';
 
 import DataSyncPage from './pages/DataSyncPage';
 function App() {
@@ -67,6 +70,9 @@ function App() {
                       <Route path="/payment/:orderId" element={<PaymentPage />} />
                       <Route path="/payment/callback" element={<PaymentCallbackPage />} />
                       <Route path="/auctions" element={<AuctionsPage />} />
+                      <Route path="/auctions/:id" element={<AuctionDetailPage />} />
+                      <Route path="/auctions/:id/bid" element={<AuctionBidPage />} />
+                      <Route path="/auctions/:id/buyout" element={<AuctionBuyoutPage />} />
                       <Route path="/admin" element={<AdminPage />} />
                       <Route path="/datascraper" element={<DataSyncPage />} /> 
                       <Route path="*" element={<NotFoundPage />} />
