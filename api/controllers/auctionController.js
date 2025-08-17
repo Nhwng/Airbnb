@@ -9,12 +9,84 @@ const Image = require('../models/Image');
 exports.requestAuction = async (req, res) => {
   try {
     const userData = req.user;
-    const { listing_id, starting_price, buyout_price } = req.body;
+    const { 
+      listing_id, 
+      check_in_date, 
+      check_out_date, 
+      auction_duration_days, 
+      auction_start_date, 
+      auction_end_date, 
+      total_nights, 
+      starting_price, 
+      buyout_price 
+    } = req.body;
 
     // Validate required fields
-    if (!listing_id || !starting_price || !buyout_price) {
+    if (!listing_id || !check_in_date || !check_out_date || !auction_duration_days || 
+        !auction_start_date || !auction_end_date || !total_nights || 
+        !starting_price || !buyout_price) {
       return res.status(400).json({
-        message: 'All fields are required: listing_id, starting_price, buyout_price'
+        message: 'All fields are required: listing_id, check_in_date, check_out_date, auction_duration_days, auction_start_date, auction_end_date, total_nights, starting_price, buyout_price'
+      });
+    }
+
+    // Validate date logic
+    const checkIn = new Date(check_in_date);
+    const checkOut = new Date(check_out_date);
+    const auctionStart = new Date(auction_start_date);
+    const auctionEnd = new Date(auction_end_date);
+    const today = new Date();
+
+    // Check minimum lead time (21 days)
+    const minCheckIn = new Date();
+    minCheckIn.setDate(minCheckIn.getDate() + 21);
+    if (checkIn < minCheckIn) {
+      return res.status(400).json({
+        message: 'Check-in date must be at least 21 days from today (14 days auction + 7 days buffer)'
+      });
+    }
+
+    // Check if check-out is after check-in
+    if (checkOut <= checkIn) {
+      return res.status(400).json({
+        message: 'Check-out date must be after check-in date'
+      });
+    }
+
+    // Validate 7-day buffer rule
+    const bufferDate = new Date(checkIn);
+    bufferDate.setDate(bufferDate.getDate() - 7);
+    if (auctionEnd > bufferDate) {
+      return res.status(400).json({
+        message: 'Auction must end at least 7 days before check-in date'
+      });
+    }
+
+    // Validate auction timing
+    if (auctionStart >= auctionEnd) {
+      return res.status(400).json({
+        message: 'Auction start date must be before auction end date'
+      });
+    }
+
+    if (auctionStart <= today) {
+      return res.status(400).json({
+        message: 'Auction cannot start in the past'
+      });
+    }
+
+    // Validate total nights calculation
+    const calculatedNights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+    if (total_nights !== calculatedNights) {
+      return res.status(400).json({
+        message: 'Total nights must match the difference between check-in and check-out dates'
+      });
+    }
+
+    // Validate auction duration
+    if (![7, 14, 21, 30].includes(parseInt(auction_duration_days))) {
+      return res.status(400).json({
+        message: 'Auction duration must be 7, 14, 21, or 30 days'
       });
     }
 
@@ -61,6 +133,12 @@ exports.requestAuction = async (req, res) => {
     const auctionRequest = new AuctionRequest({
       listing_id,
       host_id: userData.user_id,
+      check_in_date: checkIn,
+      check_out_date: checkOut,
+      auction_duration_days: parseInt(auction_duration_days),
+      auction_start_date: auctionStart,
+      auction_end_date: auctionEnd,
+      total_nights: parseInt(total_nights),
       starting_price: Number(starting_price),
       buyout_price: Number(buyout_price)
     });
@@ -184,18 +262,36 @@ exports.updateAuctionRequestStatus = async (req, res) => {
 
     // If approved, create active auction
     if (status === 'approved') {
-      // Set auction period - starts from day 15 onwards
-      const auctionStart = new Date();
-      auctionStart.setDate(auctionStart.getDate() + 14); // Start from day 15
+      // Validate that auction timing is still valid
+      const now = new Date();
+      const auctionStart = new Date(request.auction_start_date);
+      const auctionEnd = new Date(request.auction_end_date);
+      const checkIn = new Date(request.check_in_date);
       
-      const auctionEnd = new Date(auctionStart);
-      auctionEnd.setDate(auctionEnd.getDate() + 14); // 2-week auction period
+      // Check if auction can still start in the future
+      if (auctionStart <= now) {
+        return res.status(400).json({
+          message: 'Auction start date has passed. Please request a new auction with updated dates.'
+        });
+      }
+      
+      // Double-check 7-day buffer rule
+      const bufferDate = new Date(checkIn);
+      bufferDate.setDate(bufferDate.getDate() - 7);
+      if (auctionEnd > bufferDate) {
+        return res.status(400).json({
+          message: 'Auction timing no longer valid. Auction must end at least 7 days before check-in.'
+        });
+      }
 
       const auction = new Auction({
         listing_id: request.listing_id,
         host_id: request.host_id,
         auction_start: auctionStart,
         auction_end: auctionEnd,
+        check_in_date: request.check_in_date,
+        check_out_date: request.check_out_date,
+        total_nights: request.total_nights,
         starting_price: request.starting_price,
         buyout_price: request.buyout_price,
         current_bid: request.starting_price

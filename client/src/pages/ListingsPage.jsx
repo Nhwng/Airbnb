@@ -9,27 +9,146 @@ import axiosInstance from '@/utils/axios';
 const ListingCard = ({ listing, onAuctionRequest }) => {
   const [showAuctionModal, setShowAuctionModal] = useState(false);
   const [auctionForm, setAuctionForm] = useState({
+    check_in_date: '',
+    check_out_date: '',
+    auction_duration_days: 14,
     starting_price: listing.nightly_price || 0,
     buyout_price: (listing.nightly_price || 0) * 1.5
   });
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [timeline, setTimeline] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Helper functions for date calculations
+  const getMinCheckInDate = () => {
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 21); // 14 days auction + 7 days buffer
+    return minDate.toISOString().split('T')[0];
+  };
+
+  const getMinCheckOutDate = () => {
+    if (!auctionForm.check_in_date) return '';
+    const checkIn = new Date(auctionForm.check_in_date);
+    checkIn.setDate(checkIn.getDate() + 1); // Minimum 1 night
+    return checkIn.toISOString().split('T')[0];
+  };
+
+  const calculateNights = () => {
+    if (!auctionForm.check_in_date || !auctionForm.check_out_date) return 0;
+    const checkIn = new Date(auctionForm.check_in_date);
+    const checkOut = new Date(auctionForm.check_out_date);
+    const diffTime = checkOut - checkIn;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const calculateTimeline = () => {
+    if (!auctionForm.check_in_date || !auctionForm.auction_duration_days) return null;
+    
+    const checkIn = new Date(auctionForm.check_in_date);
+    const auctionEnd = new Date(checkIn);
+    auctionEnd.setDate(auctionEnd.getDate() - 7); // 7 days before check-in
+    
+    const auctionStart = new Date(auctionEnd);
+    auctionStart.setDate(auctionStart.getDate() - parseInt(auctionForm.auction_duration_days));
+    
+    return {
+      auctionStart: auctionStart.toLocaleDateString(),
+      auctionEnd: auctionEnd.toLocaleDateString(),
+      checkIn: checkIn.toLocaleDateString(),
+      checkOut: auctionForm.check_out_date ? new Date(auctionForm.check_out_date).toLocaleDateString() : '',
+      nights: calculateNights()
+    };
+  };
+
+  const validateForm = () => {
+    const errors = [];
+    const checkIn = new Date(auctionForm.check_in_date);
+    const checkOut = new Date(auctionForm.check_out_date);
+    const today = new Date();
+    
+    // Check minimum lead time (21 days)
+    const minCheckIn = new Date();
+    minCheckIn.setDate(minCheckIn.getDate() + 21);
+    if (checkIn < minCheckIn) {
+      errors.push('Check-in date must be at least 21 days from today (14 days auction + 7 days buffer)');
+    }
+    
+    // Check if check-out is after check-in
+    if (checkOut <= checkIn) {
+      errors.push('Check-out date must be after check-in date');
+    }
+    
+    // Validate auction can start in time
+    const auctionEnd = new Date(checkIn);
+    auctionEnd.setDate(auctionEnd.getDate() - 7);
+    const auctionStart = new Date(auctionEnd);
+    auctionStart.setDate(auctionStart.getDate() - parseInt(auctionForm.auction_duration_days));
+    
+    if (auctionStart <= today) {
+      errors.push('Auction cannot start in the past. Please choose later accommodation dates or shorter auction duration.');
+    }
+    
+    // Price validation
+    if (parseFloat(auctionForm.buyout_price) <= parseFloat(auctionForm.starting_price)) {
+      errors.push('Buyout price must be higher than starting price');
+    }
+    
+    if (parseFloat(auctionForm.starting_price) <= 0 || parseFloat(auctionForm.buyout_price) <= 0) {
+      errors.push('Starting price and buyout price must be greater than 0');
+    }
+    
+    return errors;
+  };
+
+  // Update timeline when form changes
+  React.useEffect(() => {
+    setTimeline(calculateTimeline());
+    setValidationErrors(validateForm());
+  }, [auctionForm]);
 
   const handleAuctionSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    const errors = validateForm();
+    if (errors.length > 0) {
+      alert('Please fix the following errors:\n\n' + errors.join('\n'));
+      return;
+    }
+    
     setSubmitting(true);
     
     try {
+      // Calculate auction timeline
+      const checkIn = new Date(auctionForm.check_in_date);
+      const checkOut = new Date(auctionForm.check_out_date);
+      const auctionEnd = new Date(checkIn);
+      auctionEnd.setDate(auctionEnd.getDate() - 7); // 7 days before check-in
+      const auctionStart = new Date(auctionEnd);
+      auctionStart.setDate(auctionStart.getDate() - parseInt(auctionForm.auction_duration_days));
+      
       await axiosInstance.post('/auctions/request', {
         listing_id: listing.listing_id,
-        starting_price: auctionForm.starting_price,
-        buyout_price: auctionForm.buyout_price
+        check_in_date: auctionForm.check_in_date,
+        check_out_date: auctionForm.check_out_date,
+        auction_duration_days: parseInt(auctionForm.auction_duration_days),
+        auction_start_date: auctionStart.toISOString(),
+        auction_end_date: auctionEnd.toISOString(),
+        total_nights: calculateNights(),
+        starting_price: parseFloat(auctionForm.starting_price),
+        buyout_price: parseFloat(auctionForm.buyout_price)
       });
       
       setShowAuctionModal(false);
       setAuctionForm({
+        check_in_date: '',
+        check_out_date: '',
+        auction_duration_days: 14,
         starting_price: listing.nightly_price || 0,
         buyout_price: (listing.nightly_price || 0) * 1.5
       });
+      setValidationErrors([]);
+      setTimeline(null);
       
       if (onAuctionRequest) {
         onAuctionRequest();
@@ -108,13 +227,13 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
       {/* Auction Registration Modal */}
       {showAuctionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Register for Auction</h3>
             <p className="text-gray-600 mb-6">Submit your room for auction approval by admin.</p>
             
             <form onSubmit={handleAuctionSubmit}>
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
                       <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -122,46 +241,153 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">Auction Information</h3>
+                      <h3 className="text-sm font-medium text-blue-800">Enhanced Auction Rules</h3>
                       <div className="mt-2 text-sm text-blue-700">
-                        <p>• Auctions apply to bookings from <strong>day 15 onwards</strong></p>
-                        <p>• Direct rental is available for the <strong>next 2 weeks</strong></p>
+                        <p>• Auction must end at least <strong>7 days before</strong> check-in</p>
+                        <p>• Minimum <strong>21 days lead time</strong> required for auctions</p>
+                        <p>• Choose flexible auction duration (7-30 days)</p>
                         <p>• Set competitive starting and buyout prices</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* Accommodation Period */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Starting Bid Price (₫)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={auctionForm.starting_price}
-                    onChange={(e) => setAuctionForm(prev => ({ ...prev, starting_price: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Enter minimum starting price"
-                  />
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Accommodation Period</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Check-in Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        min={getMinCheckInDate()}
+                        value={auctionForm.check_in_date}
+                        onChange={(e) => setAuctionForm(prev => ({ ...prev, check_in_date: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Must be at least 21 days from today
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Check-out Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        min={getMinCheckOutDate()}
+                        value={auctionForm.check_out_date}
+                        onChange={(e) => setAuctionForm(prev => ({ ...prev, check_out_date: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                        disabled={!auctionForm.check_in_date}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        {calculateNights() > 0 ? `${calculateNights()} nights` : 'Select check-in first'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                
+
+                {/* Auction Configuration */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Buyout Price (₫)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={auctionForm.buyout_price}
-                    onChange={(e) => setAuctionForm(prev => ({ ...prev, buyout_price: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Enter immediate purchase price"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Price for instant booking without waiting for auction to end
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Auction Configuration</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Auction Duration
+                    </label>
+                    <select
+                      value={auctionForm.auction_duration_days}
+                      onChange={(e) => setAuctionForm(prev => ({ ...prev, auction_duration_days: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                    >
+                      <option value="7">1 week (7 days)</option>
+                      <option value="14">2 weeks (14 days) - Recommended</option>
+                      <option value="21">3 weeks (21 days)</option>
+                      <option value="30">1 month (30 days)</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Longer auctions may attract more bidders
+                    </p>
+                  </div>
+                </div>
+
+                {/* Timeline Preview */}
+                {timeline && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-medium text-green-900 mb-2">Auction Timeline Preview</h4>
+                    <div className="space-y-1 text-sm text-green-800">
+                      <div>• <strong>Auction starts:</strong> {timeline.auctionStart}</div>
+                      <div>• <strong>Auction ends:</strong> {timeline.auctionEnd}</div>
+                      <div>• <strong>7-day buffer period</strong></div>
+                      <div>• <strong>Check-in:</strong> {timeline.checkIn}</div>
+                      {timeline.checkOut && <div>• <strong>Check-out:</strong> {timeline.checkOut}</div>}
+                      <div>• <strong>Stay duration:</strong> {timeline.nights} nights</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Validation Errors */}
+                {validationErrors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="font-medium text-red-900 mb-2">Please fix the following:</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Pricing */}
+                <div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Pricing</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Starting Bid Price (₫)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={auctionForm.starting_price}
+                        onChange={(e) => setAuctionForm(prev => ({ ...prev, starting_price: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                        placeholder="Enter minimum starting price"
+                      />
+                      {timeline && timeline.nights > 0 && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Suggested: {new Intl.NumberFormat('vi-VN').format((listing.nightly_price || 0) * timeline.nights * 0.8)}₫ (80% of regular price)
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Buyout Price (₫)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={auctionForm.buyout_price}
+                        onChange={(e) => setAuctionForm(prev => ({ ...prev, buyout_price: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                        placeholder="Enter immediate purchase price"
+                      />
+                      {timeline && timeline.nights > 0 && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Suggested: {new Intl.NumberFormat('vi-VN').format((listing.nightly_price || 0) * timeline.nights * 1.2)}₫ (120% of regular price)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Buyout price allows guests to skip bidding and book immediately
                   </p>
                 </div>
               </div>
@@ -177,7 +403,7 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || validationErrors.length > 0}
                   className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? 'Submitting...' : 'Submit Request'}

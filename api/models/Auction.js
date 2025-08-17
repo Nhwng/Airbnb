@@ -41,6 +41,19 @@ const auctionSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  check_in_date: {
+    type: Date,
+    required: true
+  },
+  check_out_date: {
+    type: Date,
+    required: true
+  },
+  total_nights: {
+    type: Number,
+    required: true,
+    min: 1
+  },
   current_bid: {
     type: Number,
     default: function() { return this.starting_price; }
