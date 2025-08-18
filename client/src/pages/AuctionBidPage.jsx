@@ -26,9 +26,9 @@ const AuctionBidPage = () => {
         const { data } = await axiosInstance.get(`/auctions/${id}`);
         setAuction(data);
         
-        // Set minimum bid amount (current bid + minimum increment)
-        const minimumBid = data.current_bid + 10000; // 10,000₫ minimum increment
-        setBidAmount(minimumBid.toString());
+        // Set suggested bid amount (current bid + reasonable increment)
+        const suggestedBid = data.current_bid + Math.max(1000, Math.floor(data.current_bid * 0.05)); // 5% or 1,000₫ minimum
+        setBidAmount(suggestedBid.toString());
       } catch (error) {
         console.error('Error fetching auction details:', error);
         setError('Failed to fetch auction details');
@@ -46,6 +46,25 @@ const AuctionBidPage = () => {
     return new Intl.NumberFormat('vi-VN').format(price) + '₫';
   };
 
+  const getMinimumIncrement = (currentBid) => {
+    // Dynamic minimum increment based on current bid amount
+    if (currentBid < 100000) return 1000;      // Under 100k: 1k minimum
+    if (currentBid < 500000) return 5000;      // Under 500k: 5k minimum  
+    if (currentBid < 1000000) return 10000;    // Under 1M: 10k minimum
+    return 25000;                              // Over 1M: 25k minimum
+  };
+
+  const getMinimumBid = () => {
+    if (!auction) return 0;
+    return auction.current_bid + getMinimumIncrement(auction.current_bid);
+  };
+
+  const isValidBid = (bidValue) => {
+    if (!auction || !bidValue) return false;
+    const minIncrement = getMinimumIncrement(auction.current_bid);
+    return bidValue >= (auction.current_bid + minIncrement);
+  };
+
   const handleBidSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -53,9 +72,11 @@ const AuctionBidPage = () => {
 
     try {
       const bidValue = parseInt(bidAmount);
+      const minIncrement = getMinimumIncrement(auction.current_bid);
+      const minimumBid = auction.current_bid + minIncrement;
       
-      if (bidValue <= auction.current_bid) {
-        throw new Error(`Bid must be higher than current bid of ${formatPrice(auction.current_bid)}`);
+      if (!isValidBid(bidValue)) {
+        throw new Error(`Bid must be at least ${formatPrice(minIncrement)} higher than current bid. Minimum bid: ${formatPrice(minimumBid)}`);
       }
 
       await axiosInstance.post(`/auctions/${id}/bid`, {
@@ -163,16 +184,28 @@ const AuctionBidPage = () => {
               <input
                 type="number"
                 required
-                min={auction.current_bid + 1}
-                step="1000"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
-                className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
-                placeholder={`Minimum: ${formatPrice(auction.current_bid + 10000)}`}
+                className={`w-full px-4 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 ${
+                  bidAmount && !isValidBid(parseInt(bidAmount)) 
+                    ? 'border-red-300 bg-red-50' 
+                    : 'border-gray-300'
+                }`}
+                placeholder={`Minimum: ${formatPrice(getMinimumBid())}`}
               />
-              <p className="mt-2 text-sm text-gray-600">
-                Minimum bid increment: 10,000₫. Your bid must be higher than {formatPrice(auction.current_bid)}.
-              </p>
+              {bidAmount && !isValidBid(parseInt(bidAmount)) ? (
+                <p className="mt-2 text-sm text-red-600">
+                  ⚠️ Bid too low. Minimum required: {formatPrice(getMinimumBid())}
+                </p>
+              ) : bidAmount && isValidBid(parseInt(bidAmount)) ? (
+                <p className="mt-2 text-sm text-green-600">
+                  ✅ Valid bid amount
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-gray-600">
+                  Your bid must be at least {formatPrice(getMinimumIncrement(auction.current_bid))} higher than the current bid of {formatPrice(auction.current_bid)}. You can bid any amount above {formatPrice(getMinimumBid())}.
+                </p>
+              )}
             </div>
 
             {error && (
@@ -190,7 +223,7 @@ const AuctionBidPage = () => {
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• All bids are binding and cannot be retracted</li>
                 <li>• You must complete payment within 24 hours if you win</li>
-                <li>• Minimum bid increment is 10,000₫</li>
+                <li>• Minimum increment: {formatPrice(getMinimumIncrement(auction.current_bid))} above current bid (you can bid any amount above this)</li>
                 <li>• You cannot bid on your own auction</li>
                 <li>• Consider using buyout for guaranteed booking</li>
               </ul>
@@ -207,7 +240,7 @@ const AuctionBidPage = () => {
               </button>
               <button
                 type="submit"
-                disabled={submitting || !bidAmount || parseInt(bidAmount) <= auction.current_bid}
+                disabled={submitting || !bidAmount || !isValidBid(parseInt(bidAmount))}
                 className="px-6 py-3 bg-rose-600 text-white font-medium rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {submitting ? 'Placing Bid...' : `Place Bid - ${bidAmount ? formatPrice(parseInt(bidAmount)) : '₫0'}`}

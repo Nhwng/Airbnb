@@ -59,15 +59,28 @@ const AuctionCard = ({ auction }) => {
     if (!timeRemaining) return 'Auction ended';
     
     const { days, hours, minutes } = timeRemaining;
-    if (days > 0) return `${days}d ${hours}h remaining`;
-    if (hours > 0) return `${hours}h ${minutes}m remaining`;
-    return `${minutes}m remaining`;
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h ${minutes}m left`;
+    return `${minutes}m left`;
   };
 
   const isAuctionActive = timeRemaining !== null;
 
+  const getDaysRemaining = () => {
+    if (!timeRemaining) return 0;
+    return timeRemaining.days || 0;
+  };
+
+  const getTotalNights = () => {
+    return auction.total_nights || 'N/A';
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <Link 
+      to={`/auctions/${auction._id}`}
+      className="block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+    >
+      {/* Property Image - Clean without overlapping badges */}
       <div className="relative">
         {auction.listing?.firstImage && (
           <img 
@@ -76,134 +89,150 @@ const AuctionCard = ({ auction }) => {
             className="w-full h-48 object-cover"
           />
         )}
-        <div className="absolute top-3 left-3">
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-            isAuctionActive 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-red-100 text-red-800'
-          }`}>
-            {isAuctionActive ? 'Active' : 'Ended'}
-          </div>
-        </div>
-        <div className="absolute top-3 right-3">
-          <div className="bg-black bg-opacity-60 text-white px-2 py-1 rounded-md text-xs font-medium">
-            <Timer className="w-3 h-3 inline mr-1" />
-            {getTimeRemainingText()}
-          </div>
-        </div>
+        {/* Subtle gradient overlay for better transition */}
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/10 to-transparent"></div>
       </div>
 
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-1">
-              {auction.listing?.title}
-            </h3>
-            <div className="flex items-center text-gray-500 text-sm">
-              <MapPin className="w-4 h-4 mr-1" />
-              {auction.listing?.city}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4 mb-4">
-          {/* Auction Timeline */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">🕐 Auction Timeline</h4>
-            <div className="space-y-1 text-xs text-blue-800">
-              <div className="flex justify-between">
-                <span>Auction ends:</span>
-                <span className="font-medium">{formatDate(auction.auction_end)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Time remaining:</span>
-                <span className="font-medium text-red-600">{getTimeRemainingText()}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Accommodation Details */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <h4 className="text-sm font-semibold text-green-900 mb-2">🏠 Accommodation Details</h4>
-            <div className="space-y-1 text-xs text-green-800">
-              <div className="flex justify-between">
-                <span>Check-in Date:</span>
-                <span className="font-medium">{auction.check_in_date ? formatDate(auction.check_in_date) : 'Not specified'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Check-out Date:</span>
-                <span className="font-medium">{auction.check_out_date ? formatDate(auction.check_out_date) : 'Not specified'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Stay Duration:</span>
-                <span className="font-medium">{auction.total_nights || 'N/A'} nights</span>
-              </div>
-            </div>
+      {/* Card Content */}
+      <div className="p-5">
+        {/* Status Header - Clear separation from image */}
+        <div className="flex items-center justify-between mb-4">
+          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold ${
+            isAuctionActive 
+              ? 'bg-green-500 text-white' 
+              : 'bg-red-500 text-white'
+          }`}>
+            <div className={`w-2 h-2 rounded-full mr-2 ${
+              isAuctionActive ? 'bg-white animate-pulse' : 'bg-gray-200'
+            }`}></div>
+            {isAuctionActive ? 'LIVE AUCTION' : 'AUCTION ENDED'}
           </div>
           
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Capacity:</span>
-            <div className="flex items-center">
-              <Users className="w-4 h-4 mr-1" />
-              <span className="font-medium">{auction.listing?.person_capacity} guests</span>
+          {/* Enhanced Days Left Display */}
+          {getDaysRemaining() > 0 ? (
+            <div className="bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-lg">
+              <div className="flex items-center text-blue-800">
+                <Clock className="w-3 h-3 mr-1" />
+                <span className="text-xs font-bold">
+                  {getDaysRemaining()}
+                </span>
+                <span className="text-xs font-medium ml-1">
+                  day{getDaysRemaining() !== 1 ? 's' : ''} left
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-red-100 border border-red-300 px-3 py-1.5 rounded-lg">
+              <div className="flex items-center text-red-800">
+                <Timer className="w-3 h-3 mr-1" />
+                <span className="text-xs font-medium">
+                  {getTimeRemainingText()}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Starting Price:</span>
-            <span className="text-gray-400 line-through">{formatPrice(auction.starting_price)}</span>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Buyout Price:</span>
-            <span className="font-medium text-green-600">{formatPrice(auction.buyout_price)}</span>
+        {/* Property Header */}
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+            {auction.listing?.title}
+          </h3>
+          <div className="flex items-center text-gray-500 text-sm mb-3">
+            <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+            <span className="truncate">{auction.listing?.city}</span>
+            <span className="mx-2">•</span>
+            <Users className="w-4 h-4 mr-1 flex-shrink-0" />
+            <span>{auction.listing?.person_capacity} guests</span>
           </div>
         </div>
 
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center">
-              <TrendingUp className="w-5 h-5 text-rose-600 mr-2" />
-              <span className="font-semibold text-rose-900">Current Bid</span>
+        {/* Stay Information */}
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mb-4">
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="text-center">
+              <span className="text-purple-600 font-medium block mb-1">Stay Duration</span>
+              <div className="text-lg font-bold text-purple-900">
+                {getTotalNights()}
+              </div>
+              <div className="text-purple-600">nights</div>
             </div>
-            <span className="text-xl font-bold text-rose-900">{formatPrice(auction.current_bid)}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm text-rose-700">
-            <span>{auction.bid_count} bids placed</span>
-            {auction.highest_bidder && (
-              <span>Leading bidder</span>
-            )}
+            <div className="text-center">
+              <span className="text-green-600 font-medium block mb-1">Check-in</span>
+              <div className="text-sm font-semibold text-green-900">
+                {auction.check_in_date ? formatDate(auction.check_in_date) : 'TBD'}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex space-x-2">
-          <Link
-            to={`/auctions/${auction._id}`}
-            className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            <Eye className="w-4 h-4 mr-1" />
-            Details
-          </Link>
-          {user && isAuctionActive && (
-            <>
+        {/* Pricing Section */}
+        <div className="space-y-3 mb-4">
+          {/* Current Bid - Prominent */}
+          <div className="bg-rose-50 border-l-4 border-rose-400 rounded-r-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-rose-600 font-medium mb-1">CURRENT BID</div>
+                <div className="text-xl font-bold text-rose-900">{formatPrice(auction.current_bid)}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-rose-600">{auction.bid_count || 0} bids</div>
+                <TrendingUp className="w-5 h-5 text-rose-500 mt-1 ml-auto" />
+              </div>
+            </div>
+          </div>
+
+          {/* Price Comparison */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <div className="text-xs text-gray-500 mb-1">Starting</div>
+              <div className="text-sm font-semibold text-gray-400 line-through">
+                {formatPrice(auction.starting_price)}
+              </div>
+            </div>
+            <div className="text-center p-2 bg-green-50 rounded-lg">
+              <div className="text-xs text-green-600 mb-1">Buyout</div>
+              <div className="text-sm font-bold text-green-700">
+                {formatPrice(auction.buyout_price)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {/* Primary Actions for Active Auctions */}
+          {user && isAuctionActive ? (
+            <div className="grid grid-cols-2 gap-2">
               <Link
                 to={`/auctions/${auction._id}/bid`}
-                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center justify-center px-4 py-2.5 bg-rose-600 text-white text-sm font-semibold rounded-lg hover:bg-rose-700 transition-colors"
               >
-                <Gavel className="w-4 h-4 mr-1" />
-                Bid
+                <Gavel className="w-4 h-4 mr-1.5" />
+                Place Bid
               </Link>
               <Link
                 to={`/auctions/${auction._id}/buyout`}
-                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center justify-center px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
               >
-                Buyout
+                Buy Now
               </Link>
-            </>
+            </div>
+          ) : (
+            <div className="text-center">
+              {!user && (
+                <div className="text-xs text-gray-500 mb-2">Login required to bid</div>
+              )}
+              {!isAuctionActive && (
+                <div className="text-xs text-gray-500 mb-2">Auction has ended</div>
+              )}
+            </div>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
@@ -384,7 +413,7 @@ const AuctionsPage = () => {
         </div>
 
         {auctions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
             {auctions.map((auction) => (
               <AuctionCard key={auction._id} auction={auction} />
             ))}
