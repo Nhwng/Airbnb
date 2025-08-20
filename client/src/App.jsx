@@ -32,7 +32,6 @@ import VerifyPinPage from './pages/VerifyPinPage';
 import BecomeHostPage from './pages/BecomeHostPage';
 import AuctionsPage from './pages/AuctionsPage';
 
-import DataSyncPage from './pages/DataSyncPage';
 function App() {
   useEffect(() => {
     // set the token on refreshing the website
@@ -68,7 +67,6 @@ function App() {
                       <Route path="/payment/callback" element={<PaymentCallbackPage />} />
                       <Route path="/auctions" element={<AuctionsPage />} />
                       <Route path="/admin" element={<AdminPage />} />
-                      <Route path="/datascraper" element={<DataSyncPage />} /> 
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
                   </Routes>

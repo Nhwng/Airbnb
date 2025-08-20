@@ -4,6 +4,7 @@ import logging
 import re
 from datetime import datetime
 import time
+import sys
 
 # Cấu hình logging
 logging.basicConfig(
@@ -32,15 +33,13 @@ def parse_price(price_obj):
     except Exception:
         return None, None
 
-def process_airbnb_data():
+def process_airbnb_data(check_in, check_out):
     # Danh sách các thành phố với tọa độ
     cities = [
         {"name": "Ho Chi Minh City", "ne_lat": 10.8231, "ne_long": 106.7297, "sw_lat": 10.7075, "sw_long": 106.6072},
         {"name": "Ha Noi", "ne_lat": 21.0542, "ne_long": 105.8519, "sw_lat": 20.9387, "sw_long": 105.7334},
         {"name": "Da Nang", "ne_lat": 16.0787, "ne_long": 108.2500, "sw_lat": 15.9650, "sw_long": 108.1333},
     ]
-    check_in = "2025-06-15"
-    check_out = "2025-06-16"
     zoom_value = 10
     price_min = 0
     price_max = 0
@@ -212,4 +211,10 @@ def process_airbnb_data():
         logging.info("MongoDB connection closed.")
 
 if __name__ == "__main__":
-    process_airbnb_data()
+    if len(sys.argv) != 3:
+        logging.error("Usage: python scrape_data.py <check_in> <check_out>")
+        sys.exit(1)
+    
+    check_in = sys.argv[1]
+    check_out = sys.argv[2]
+    process_airbnb_data(check_in, check_out)

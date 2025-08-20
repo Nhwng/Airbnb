@@ -1,5 +1,4 @@
-import HostRequestsAdmin from '@/components/admin/HostRequestsAdmin';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks';
 import AdminSidebar from '@/components/ui/AdminSidebar';
@@ -9,6 +8,8 @@ import CustomerManagementModule from '@/components/admin/CustomerManagementModul
 import TransactionManagementModule from '@/components/admin/TransactionManagementModule';
 import StatisticsManagementModule from '@/components/admin/StatisticsManagementModule';
 import AuctionManagementModule from '@/components/admin/AuctionManagementModule';
+import HostRequestsAdmin from '@/components/admin/HostRequestsAdmin';
+import DataSyncModule from '@/components/admin/DataSyncModule';
 
 const AdminPage = () => {
   const { user } = useAuth();
@@ -35,6 +36,8 @@ const AdminPage = () => {
         return <HostRequestsAdmin />;
       case 'auctions':
         return <AuctionManagementModule />;
+      case 'dataSync':
+        return <DataSyncModule />;
       default:
         return <SystemSettingsModule />;
     }
@@ -43,13 +46,7 @@ const AdminPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <AdminSidebar activeModule={activeModule} setActiveModule={setActiveModule} />
-      
-
       <div className="flex-1 pt-20">
-        {/* 
-          Giới hạn max-width, canh giữa với mx-auto, và
-          padding chỉ ở trong container con
-        */}
         <div className="max-w-5xl w-full mx-auto p-8">
           {renderModule()}
         </div>
