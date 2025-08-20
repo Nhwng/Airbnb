@@ -48,6 +48,8 @@ app.use(
 
 // use express router
 app.use("/", require("./routes"));
+
+// Data sync cron job (existing)
 cron.schedule('0 2 * * *', () => {
   console.log('Running scheduled data sync at ' + new Date().toLocaleString());
   const scriptPath = path.join(__dirname, 'scripts/scrape_data.py'); // Đường dẫn đến script tích hợp
@@ -61,6 +63,17 @@ cron.schedule('0 2 * * *', () => {
       console.error(`Cron stderr: ${stderr}`);
     }
   });
+});
+
+// Auction processing cron job (NEW) - runs every 5 minutes
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    console.log('🔄 Running auction processing at ' + new Date().toLocaleString());
+    const { processEndedAuctions } = require('./controllers/auctionController');
+    await processEndedAuctions();
+  } catch (error) {
+    console.error('❌ Cron job error in auction processing:', error);
+  }
 });
 app.listen(process.env.PORT || 8000, (err) => {
   if (err) {

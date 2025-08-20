@@ -62,7 +62,7 @@ const AuctionBidPage = () => {
   const isValidBid = (bidValue) => {
     if (!auction || !bidValue) return false;
     const minIncrement = getMinimumIncrement(auction.current_bid);
-    return bidValue >= (auction.current_bid + minIncrement);
+    return bidValue >= (auction.current_bid + minIncrement) && bidValue < auction.buyout_price;
   };
 
   const handleBidSubmit = async (e) => {
@@ -195,7 +195,9 @@ const AuctionBidPage = () => {
               />
               {bidAmount && !isValidBid(parseInt(bidAmount)) ? (
                 <p className="mt-2 text-sm text-red-600">
-                  ⚠️ Bid too low. Minimum required: {formatPrice(getMinimumBid())}
+                  ⚠️ {parseInt(bidAmount) < getMinimumBid() 
+                    ? `Bid too low. Minimum required: ${formatPrice(getMinimumBid())}` 
+                    : `Bid too high. Must be less than buyout price: ${formatPrice(auction.buyout_price)}`}
                 </p>
               ) : bidAmount && isValidBid(parseInt(bidAmount)) ? (
                 <p className="mt-2 text-sm text-green-600">
@@ -203,7 +205,7 @@ const AuctionBidPage = () => {
                 </p>
               ) : (
                 <p className="mt-2 text-sm text-gray-600">
-                  Your bid must be at least {formatPrice(getMinimumIncrement(auction.current_bid))} higher than the current bid of {formatPrice(auction.current_bid)}. You can bid any amount above {formatPrice(getMinimumBid())}.
+                  Your bid must be at least {formatPrice(getMinimumIncrement(auction.current_bid))} higher than the current bid of {formatPrice(auction.current_bid)} and less than the buyout price of {formatPrice(auction.buyout_price)}. You can bid any amount between {formatPrice(getMinimumBid())} and {formatPrice(auction.buyout_price - 1)}.
                 </p>
               )}
             </div>
@@ -251,12 +253,18 @@ const AuctionBidPage = () => {
           {/* Alternative Option */}
           <div className="mt-8 pt-8 border-t border-gray-200 text-center">
             <p className="text-gray-600 mb-4">Skip the auction and book immediately?</p>
-            <Link
-              to={`/auctions/${id}/buyout`}
-              className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Buy Now - {formatPrice(auction.buyout_price)}
-            </Link>
+            {auction.current_bid < auction.buyout_price ? (
+              <Link
+                to={`/auctions/${id}/buyout`}
+                className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Buy Now - {formatPrice(auction.buyout_price)}
+              </Link>
+            ) : (
+              <div className="inline-flex items-center px-6 py-3 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed opacity-60">
+                Buy Now Unavailable - Current bid exceeds buyout price
+              </div>
+            )}
           </div>
         </div>
       </div>

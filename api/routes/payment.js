@@ -7,6 +7,7 @@ const {
   handleZaloPayCallback,
   getPayment,
   getUserPayments,
+  refreshPayment,
 } = require('../controllers/paymentController');
 
 router.route('/')
@@ -15,6 +16,9 @@ router.route('/')
 
 router.route('/:paymentId')
   .get(isLoggedIn, getPayment);
+
+router.route('/:paymentId/refresh')
+  .post(isLoggedIn, refreshPayment);
 
 router.post('/zalopay/callback', handleZaloPayCallback);
 

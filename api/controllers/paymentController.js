@@ -39,7 +39,38 @@ exports.createPayment = async (req, res) => {
       });
     }
 
-    const transactionId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Check if there's already a pending payment for this order
+    let existingPayment = await Payment.findOne({
+      order_id: Number(orderId),
+      user_id: userData.user_id,
+      status: 'pending'
+    });
+
+    // If payment exists and it's for ZaloPay, check if it's likely expired (older than 15 minutes)
+    if (existingPayment && paymentMethod === 'zalopay') {
+      const paymentAge = new Date() - existingPayment.created_at;
+      const fifteenMinutes = 15 * 60 * 1000; // 15 minutes in milliseconds
+      
+      if (paymentAge > fifteenMinutes) {
+        // Mark old payment as expired and create a new one
+        existingPayment.status = 'failed';
+        await existingPayment.save();
+        existingPayment = null; // Set to null to create new payment
+      }
+    }
+
+    // If we have a valid existing payment, return it with the payment URL
+    if (existingPayment) {
+      const paymentUrl = existingPayment.gateway_response?.order_url || null;
+      return res.status(200).json({
+        success: true,
+        message: 'Existing payment found',
+        payment: existingPayment,
+        paymentUrl: paymentUrl
+      });
+    }
+
+    const transactionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     let paymentResult = null;
     let amount = order.total_price;
@@ -275,6 +306,97 @@ exports.getUserPayments = async (req, res) => {
     });
   } catch (err) {
     console.error('Error getting user payments:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: err.message,
+    });
+  }
+};
+
+exports.refreshPayment = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const userData = req.user;
+
+    const payment = await Payment.findOne({
+      payment_id: Number(paymentId),
+      user_id: userData.user_id,
+      status: 'pending'
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pending payment not found',
+      });
+    }
+
+    // Get the associated order
+    const order = await Order.findOne({ 
+      order_id: payment.order_id,
+      user_id: userData.user_id 
+    });
+
+    if (!order || order.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Associated order is not valid for payment',
+      });
+    }
+
+    if (new Date() > order.expires_at) {
+      order.status = 'expired';
+      await order.save();
+      payment.status = 'failed';
+      await payment.save();
+      return res.status(400).json({
+        success: false,
+        message: 'Order has expired',
+      });
+    }
+
+    // Only refresh ZaloPay payments (sandbox doesn't need refresh)
+    if (payment.payment_method === 'zalopay') {
+      // Mark old payment as failed
+      payment.status = 'failed';
+      await payment.save();
+
+      // Create new ZaloPay payment
+      const paymentResult = await createZaloPayOrder(payment.amount, order.order_id, userData.user_id);
+      const transactionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+      const newPayment = await Payment.create({
+        order_id: order.order_id,
+        user_id: userData.user_id,
+        amount: payment.amount,
+        currency: payment.currency,
+        payment_method: 'zalopay',
+        transaction_id: transactionId,
+        external_transaction_id: paymentResult?.app_trans_id,
+        gateway_response: paymentResult,
+        callback_url: zalopayConfig.callback_url,
+        return_url: payment.return_url
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment refreshed successfully',
+        payment: newPayment,
+        paymentUrl: paymentResult?.order_url || null
+      });
+    } else {
+      // For sandbox or other methods, just return existing payment
+      return res.status(200).json({
+        success: true,
+        message: 'Payment is still valid',
+        payment,
+        paymentUrl: null
+      });
+    }
+
+  } catch (err) {
+    console.error('Error refreshing payment:', err);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

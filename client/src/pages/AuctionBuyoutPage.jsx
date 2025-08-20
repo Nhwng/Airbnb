@@ -54,13 +54,9 @@ const AuctionBuyoutPage = () => {
     setProcessing(true);
 
     try {
-      // For now, we'll just show a success message
-      // In a real implementation, this would integrate with the payment system
-      alert('Buyout successful! You will be redirected to payment processing.');
+      const response = await axiosInstance.post(`/auctions/${id}/buyout`);
       
-      // TODO: Integrate with payment system
-      // const response = await axiosInstance.post(`/auctions/${id}/buyout`);
-      
+      alert('Buyout successful! The auction has been completed and you are the winner.');
       navigate(`/auctions/${id}`);
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to process buyout');
@@ -92,6 +88,7 @@ const AuctionBuyoutPage = () => {
 
   // Check if auction is still active
   const isAuctionActive = new Date(auction.auction_end) > new Date();
+  const isBuyoutAvailable = auction.current_bid < auction.buyout_price;
 
   if (!isAuctionActive) {
     return (
@@ -102,6 +99,31 @@ const AuctionBuyoutPage = () => {
           <Link to={`/auctions/${id}`} className="text-rose-600 hover:text-rose-700">
             ← View Auction Details
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isBuyoutAvailable) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Buyout No Longer Available</h1>
+          <p className="text-gray-600 mb-6">
+            The current bid ({formatPrice(auction.current_bid)}) has exceeded or matched the buyout price ({formatPrice(auction.buyout_price)}).
+          </p>
+          <p className="text-gray-600 mb-6">
+            You can still place a bid to compete in the auction.
+          </p>
+          <div className="space-y-3">
+            <Link to={`/auctions/${id}/bid`} className="inline-block px-6 py-3 bg-rose-600 text-white font-medium rounded-lg hover:bg-rose-700">
+              Place a Bid Instead
+            </Link>
+            <br />
+            <Link to={`/auctions/${id}`} className="text-rose-600 hover:text-rose-700">
+              ← View Auction Details
+            </Link>
+          </div>
         </div>
       </div>
     );

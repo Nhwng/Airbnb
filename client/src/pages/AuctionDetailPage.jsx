@@ -264,12 +264,18 @@ const AuctionDetailPage = () => {
                     <Gavel className="w-4 h-4 mr-2" />
                     Place Bid
                   </Link>
-                  <Link
-                    to={`/auctions/${auction._id}/buyout`}
-                    className="w-full inline-flex items-center justify-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Buy Now - {formatPrice(auction.buyout_price)}
-                  </Link>
+                  {auction.current_bid < auction.buyout_price ? (
+                    <Link
+                      to={`/auctions/${auction._id}/buyout`}
+                      className="w-full inline-flex items-center justify-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Buy Now - {formatPrice(auction.buyout_price)}
+                    </Link>
+                  ) : (
+                    <div className="w-full inline-flex items-center justify-center px-4 py-3 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed opacity-60">
+                      Buy Now Unavailable - Current bid exceeds buyout price
+                    </div>
+                  )}
                 </div>
               )}
 

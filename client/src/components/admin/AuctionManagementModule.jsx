@@ -88,15 +88,27 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
           </div>
           <div className="flex items-center text-gray-700">
             <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm font-medium">{formatPrice(request.starting_price)}</span>
+            <span className="text-sm font-medium">Starting: {formatPrice(request.starting_price)}</span>
           </div>
           <div className="flex items-center text-gray-700">
             <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm">{formatDate(request.start_date)} - {formatDate(request.end_date)}</span>
+            <span className="text-sm">{formatDate(request.check_in_date)} - {formatDate(request.check_out_date)}</span>
           </div>
           <div className="flex items-center text-gray-700">
             <Clock className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm">{formatDate(request.created_at)}</span>
+            <span className="text-sm">Created: {formatDate(request.created_at)}</span>
+          </div>
+        </div>
+
+        {/* Auction Details Row */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center text-gray-700">
+            <Gavel className="w-4 h-4 mr-2 text-gray-400" />
+            <span className="text-sm">Buyout: {formatPrice(request.buyout_price)}</span>
+          </div>
+          <div className="flex items-center text-gray-700">
+            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+            <span className="text-sm">Auction: {formatDate(request.auction_start_date)} - {formatDate(request.auction_end_date)}</span>
           </div>
         </div>
 
@@ -112,13 +124,67 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
               </div>
             )}
             
-            <div className="space-y-3 mb-4">
+            <div className="space-y-4 mb-4">
               <div>
-                <h4 className="font-medium text-gray-900 mb-1">Listing Details</h4>
-                <p className="text-sm text-gray-600">
-                  Capacity: {request.listing?.person_capacity || 1} guests • 
-                  Base Price: {formatPrice(request.listing?.nightly_price || 0)}/night
-                </p>
+                <h4 className="font-medium text-gray-900 mb-2">Listing Details</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Capacity:</span>
+                    <span className="ml-2 font-medium">{request.listing?.person_capacity || 1} guests</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Base Price:</span>
+                    <span className="ml-2 font-medium">{formatPrice(request.listing?.nightly_price || 0)}/night</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Total Nights:</span>
+                    <span className="ml-2 font-medium">{request.total_nights} nights</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Auction Duration:</span>
+                    <span className="ml-2 font-medium">{request.auction_duration_days} days</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Auction Timeline</h4>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-600 font-medium">Auction Period:</span>
+                      <div className="text-blue-900 mt-1">
+                        {formatDate(request.auction_start_date)} → {formatDate(request.auction_end_date)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-green-600 font-medium">Stay Period:</span>
+                      <div className="text-green-900 mt-1">
+                        {formatDate(request.check_in_date)} → {formatDate(request.check_out_date)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Pricing Details</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-gray-500 mb-1">Starting Price</div>
+                    <div className="font-bold text-gray-900">{formatPrice(request.starting_price)}</div>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <div className="text-green-600 mb-1">Buyout Price</div>
+                    <div className="font-bold text-green-900">{formatPrice(request.buyout_price)}</div>
+                  </div>
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-blue-600 mb-1">Price Difference</div>
+                    <div className="font-bold text-blue-900">
+                      {formatPrice(request.buyout_price - request.starting_price)}
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div>

@@ -44,6 +44,20 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'cancelled', 'expired'],
     default: 'pending'
   },
+  auction_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Auction',
+    default: null
+  },
+  order_type: {
+    type: String,
+    enum: ['regular', 'auction', 'buyout'],
+    default: 'regular'
+  },
+  notes: {
+    type: String,
+    default: ''
+  },
   expires_at: {
     type: Date,
     required: true,

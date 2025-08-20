@@ -4,6 +4,104 @@ const Bid = require('../models/Bid');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Image = require('../models/Image');
+const Order = require('../models/Order');
+const Availability = require('../models/Availability');
+
+// Helper function to create order for auction winner
+const createAuctionOrder = async (auction, winnerId, finalPrice, orderType = 'auction') => {
+  try {
+    // Get winner and listing details
+    const winner = await User.findOne({ user_id: winnerId });
+    const listing = await Listing.findOne({ listing_id: auction.listing_id });
+    
+    if (!winner || !listing) {
+      throw new Error('Winner or listing not found');
+    }
+
+    // Calculate number of nights
+    const checkInDate = new Date(auction.check_in_date);
+    const checkOutDate = new Date(auction.check_out_date);
+    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+    // Create the order
+    const order = await Order.create({
+      listing_id: auction.listing_id,
+      user_id: winnerId,
+      check_in: checkInDate,
+      check_out: checkOutDate,
+      num_of_guests: listing.person_capacity || 1,
+      guest_name: `${winner.first_name} ${winner.last_name}`.trim() || 'Auction Winner',
+      guest_phone: winner.phone || 'Not provided',
+      total_price: finalPrice,
+      status: 'pending', // Pending payment processing
+      auction_id: auction._id,
+      order_type: orderType, // 'auction' or 'buyout'
+      notes: `${orderType === 'buyout' ? 'Buyout' : 'Auction'} winner - Final price: ${finalPrice}₫`
+    });
+
+    // Update availability (block the dates)
+    await updateAvailabilityForOrder(auction.listing_id, checkInDate, checkOutDate);
+
+    return order;
+  } catch (error) {
+    console.error('Error creating auction order:', error);
+    throw error;
+  }
+};
+
+// Helper function to update availability
+const updateAvailabilityForOrder = async (listingId, checkIn, checkOut) => {
+  try {
+    const currentDate = new Date(checkIn);
+    const endDate = new Date(checkOut);
+    
+    while (currentDate < endDate) {
+      await Availability.updateOne(
+        { 
+          listing_id: listingId,
+          date: new Date(currentDate)
+        },
+        { 
+          listing_id: listingId,
+          date: new Date(currentDate),
+          available: false,
+          reserved: true,
+          updated_at: new Date()
+        },
+        { upsert: true }
+      );
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  } catch (error) {
+    console.error('Error updating availability:', error);
+    throw error;
+  }
+};
+
+// Helper function to send auction completion notifications
+const sendAuctionNotifications = async (auction, winnerId, finalPrice, type = 'auction') => {
+  try {
+    // TODO: Implement email/SMS notifications
+    // For now, just log the notifications that should be sent
+    console.log(`🎉 ${type.toUpperCase()} COMPLETED:`, {
+      auction_id: auction._id,
+      listing_id: auction.listing_id,
+      winner_id: winnerId,
+      final_price: finalPrice,
+      check_in: auction.check_in_date,
+      check_out: auction.check_out_date
+    });
+    
+    // Notifications to implement:
+    // 1. Winner notification: "Congratulations! You won the auction"
+    // 2. Host notification: "Your auction has ended, winner found"
+    // 3. Other bidders: "Auction has ended, you were outbid"
+    
+  } catch (error) {
+    console.error('Error sending notifications:', error);
+  }
+};
 
 // Host submits auction request
 exports.requestAuction = async (req, res) => {
@@ -406,6 +504,13 @@ exports.placeBid = async (req, res) => {
       });
     }
 
+    // Check if bid would exceed or equal buyout price
+    if (bid_amount >= auction.buyout_price) {
+      return res.status(400).json({
+        message: `Bid cannot exceed or equal the buyout price of ${auction.buyout_price}₫. Consider using the buyout option instead.`
+      });
+    }
+
     // Create new bid
     const bid = new Bid({
       auction_id: auction._id,
@@ -505,6 +610,163 @@ exports.getAuctionDetails = async (req, res) => {
     console.error('Get auction details error:', error);
     res.status(500).json({
       message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Buyout auction (instant purchase)
+exports.buyoutAuction = async (req, res) => {
+  try {
+    const userData = req.user;
+    const { auctionId } = req.params;
+
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({
+        message: 'Auction not found'
+      });
+    }
+
+    // Check if auction is still active
+    if (auction.status !== 'active' || auction.auction_end <= new Date()) {
+      return res.status(400).json({
+        message: 'This auction is no longer active'
+      });
+    }
+
+    // Check if host is trying to buyout own auction
+    if (auction.host_id === userData.user_id) {
+      return res.status(400).json({
+        message: 'You cannot buyout your own auction'
+      });
+    }
+
+    // Check if current bid has already exceeded or matched buyout price
+    if (auction.current_bid >= auction.buyout_price) {
+      return res.status(400).json({
+        message: 'Buyout is no longer available as the current bid has exceeded or matched the buyout price'
+      });
+    }
+
+    // End the auction immediately
+    auction.status = 'ended';
+    auction.current_bid = auction.buyout_price;
+    auction.highest_bidder = userData.user_id;
+    await auction.save();
+
+    // Create order for the buyout winner
+    let order = null;
+    try {
+      order = await createAuctionOrder(auction, userData.user_id, auction.buyout_price, 'buyout');
+      
+      // Send notifications
+      await sendAuctionNotifications(auction, userData.user_id, auction.buyout_price, 'buyout');
+      
+    } catch (orderError) {
+      console.error('Error creating order for buyout:', orderError);
+      // Still return success for auction completion, but note the order issue
+    }
+
+    res.status(200).json({
+      message: 'Buyout successful! The auction has been completed and your booking order has been created.',
+      auction: {
+        _id: auction._id,
+        final_price: auction.buyout_price,
+        winner: userData.user_id,
+        status: 'ended'
+      },
+      order: order ? {
+        order_id: order.order_id,
+        total_price: order.total_price,
+        status: order.status,
+        expires_at: order.expires_at
+      } : null,
+      next_steps: order ? 
+        'Please complete your payment within 30 minutes to confirm your booking.' :
+        'There was an issue creating your booking order. Please contact support.'
+    });
+
+  } catch (error) {
+    console.error('Buyout auction error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Process ended auctions and determine winners
+exports.processEndedAuctions = async () => {
+  try {
+    console.log('🔍 Checking for ended auctions...');
+    
+    // Find auctions that have ended but are still marked as active
+    const endedAuctions = await Auction.find({
+      status: 'active',
+      auction_end: { $lte: new Date() }
+    });
+
+    console.log(`Found ${endedAuctions.length} ended auctions to process`);
+
+    for (const auction of endedAuctions) {
+      try {
+        // Update auction status
+        auction.status = 'ended';
+        
+        // If there's a highest bidder, create an order for them
+        if (auction.highest_bidder) {
+          console.log(`Processing auction ${auction._id} with winner ${auction.highest_bidder}`);
+          
+          const order = await createAuctionOrder(
+            auction, 
+            auction.highest_bidder, 
+            auction.current_bid, 
+            'auction'
+          );
+          
+          // Send notifications
+          await sendAuctionNotifications(
+            auction, 
+            auction.highest_bidder, 
+            auction.current_bid, 
+            'auction'
+          );
+          
+          console.log(`✅ Created order ${order.order_id} for auction winner`);
+        } else {
+          console.log(`⚠️ Auction ${auction._id} ended with no bids`);
+        }
+        
+        await auction.save();
+        
+      } catch (auctionError) {
+        console.error(`❌ Error processing auction ${auction._id}:`, auctionError);
+      }
+    }
+    
+    return endedAuctions.length;
+  } catch (error) {
+    console.error('❌ Error processing ended auctions:', error);
+    throw error;
+  }
+};
+
+// Manual endpoint to process ended auctions (for testing)
+exports.processEndedAuctionsEndpoint = async (req, res) => {
+  try {
+    const processedCount = await exports.processEndedAuctions();
+    
+    res.status(200).json({
+      success: true,
+      message: `Processed ${processedCount} ended auctions`,
+      processed_count: processedCount
+    });
+  } catch (error) {
+    console.error('Error in manual auction processing:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing ended auctions',
       error: error.message
     });
   }

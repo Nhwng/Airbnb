@@ -9,7 +9,9 @@ const {
   updateAuctionRequestStatus,
   getActiveAuctions,
   placeBid,
-  getAuctionDetails
+  getAuctionDetails,
+  buyoutAuction,
+  processEndedAuctionsEndpoint
 } = require('../controllers/auctionController');
 
 // Host routes (require authentication)
@@ -26,5 +28,9 @@ router.route('/:auctionId').get(getAuctionDetails);
 
 // User bidding routes (require authentication)
 router.route('/:auctionId/bid').post(isLoggedIn, placeBid);
+router.route('/:auctionId/buyout').post(isLoggedIn, buyoutAuction);
+
+// Admin/system routes
+router.route('/admin/process-ended').post(isLoggedIn, processEndedAuctionsEndpoint);
 
 module.exports = router;
