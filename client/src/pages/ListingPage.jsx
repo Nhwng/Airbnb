@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 import PlaceGallery from '@/components/ui/PlaceGallery';
 import PerksWidget from '@/components/ui/PerksWidget';
@@ -76,9 +77,6 @@ const ListingPage = () => {
     );
   }
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
 
   return (
     <div className="min-h-screen bg-white pt-20">

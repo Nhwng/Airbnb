@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Info
 } from 'lucide-react';
-import axiosInstance from '@/utils/axios'; 
+import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils'; 
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '../../hooks';
 
@@ -43,9 +44,6 @@ const AuctionCard = ({ auction }) => {
     return () => clearInterval(interval);
   }, [auction.auction_end]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -173,7 +171,7 @@ const AuctionCard = ({ auction }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs text-rose-600 font-medium mb-1">CURRENT BID</div>
-                <div className="text-xl font-bold text-rose-900">{formatPrice(auction.current_bid)}</div>
+                <div className="text-xl font-bold text-rose-900">{formatVND(auction.current_bid)}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-rose-600">{auction.bid_count || 0} bids</div>
@@ -187,13 +185,13 @@ const AuctionCard = ({ auction }) => {
             <div className="text-center p-2 bg-gray-50 rounded-lg">
               <div className="text-xs text-gray-500 mb-1">Starting</div>
               <div className="text-sm font-semibold text-gray-400 line-through">
-                {formatPrice(auction.starting_price)}
+                {formatVND(auction.starting_price)}
               </div>
             </div>
             <div className="text-center p-2 bg-green-50 rounded-lg">
               <div className="text-xs text-green-600 mb-1">Buyout</div>
               <div className="text-sm font-bold text-green-700">
-                {formatPrice(auction.buyout_price)}
+                {formatVND(auction.buyout_price)}
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 
 import { useAuth } from '../../../hooks';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import DatePickerWithRange from './DatePickerWithRange';
 import Spinner from '@/components/ui/Spinner';
 
@@ -99,7 +100,7 @@ export default function BookingWidget({ place }) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 relative">
       <div className="text-xl text-center text-gray-700 font-medium">
-        ₫{new Intl.NumberFormat('vi-VN').format(place.price)} / night
+        {formatVND(place.price)} / night
       </div>
 
       {loading ? (
@@ -172,7 +173,7 @@ export default function BookingWidget({ place }) {
             disabled={!from || !to}
           >
             Book this place
-            {numberOfNights > 0 && ` ₫${new Intl.NumberFormat('vi-VN').format(numberOfNights * place.price)}`}
+            {numberOfNights > 0 && ` ${formatVND(numberOfNights * place.price)}`}
           </button>
         </>
       )}

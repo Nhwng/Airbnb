@@ -5,6 +5,7 @@ import { Home, Calendar, CreditCard, Users, MapPin, Edit, Gavel } from 'lucide-r
 import AccountNav from '@/components/ui/AccountNav';
 import Spinner from '@/components/ui/Spinner';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 
 const ListingCard = ({ listing, onAuctionRequest }) => {
   const [showAuctionModal, setShowAuctionModal] = useState(false);
@@ -361,7 +362,7 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
                       />
                       {timeline && timeline.nights > 0 && (
                         <p className="mt-1 text-xs text-gray-500">
-                          Suggested: {new Intl.NumberFormat('vi-VN').format((listing.nightly_price || 0) * timeline.nights * 0.8)}₫ (80% of regular price)
+                          Suggested: {formatVND((listing.nightly_price || 0) * timeline.nights * 0.8)} (80% of regular price)
                         </p>
                       )}
                     </div>
@@ -381,7 +382,7 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
                       />
                       {timeline && timeline.nights > 0 && (
                         <p className="mt-1 text-xs text-gray-500">
-                          Suggested: {new Intl.NumberFormat('vi-VN').format((listing.nightly_price || 0) * timeline.nights * 1.2)}₫ (120% of regular price)
+                          Suggested: {formatVND((listing.nightly_price || 0) * timeline.nights * 1.2)} (120% of regular price)
                         </p>
                       )}
                     </div>

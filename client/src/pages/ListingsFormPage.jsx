@@ -19,7 +19,7 @@ const PlacesFormPage = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    currency: 'USD',
+    currency: 'VND',
     nightly_price: '',
     person_capacity: 1,
     room_type: '',
@@ -85,7 +85,7 @@ const PlacesFormPage = () => {
       setFormData({
         title: listing.title || '',
         description: listing.description || '',
-        currency: listing.currency || 'USD',
+        currency: listing.currency || 'VND',
         nightly_price: listing.nightly_price || '',
         person_capacity: listing.person_capacity || 1,
         room_type: listing.room_type || '',
@@ -183,13 +183,13 @@ const PlacesFormPage = () => {
           onChange={handleFormData}
         />
 
-        {preInput('Currency', 'Currency for nightly price (e.g. USD, VND)')}
+        {preInput('Currency', 'Currency for nightly price (VND)')}
         <input
           type="text"
           name="currency"
           value={currency}
           onChange={handleFormData}
-          placeholder="USD"
+          placeholder="VND"
         />
 
         {preInput('Nightly Price', 'Price per night')}

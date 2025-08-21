@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ShoppingCart, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '../../hooks';
 
@@ -37,9 +38,6 @@ const AuctionBuyoutPage = () => {
     }
   }, [id, user, navigate]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -110,7 +108,7 @@ const AuctionBuyoutPage = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Buyout No Longer Available</h1>
           <p className="text-gray-600 mb-6">
-            The current bid ({formatPrice(auction.current_bid)}) has exceeded or matched the buyout price ({formatPrice(auction.buyout_price)}).
+            The current bid ({formatVND(auction.current_bid)}) has exceeded or matched the buyout price ({formatVND(auction.buyout_price)}).
           </p>
           <p className="text-gray-600 mb-6">
             You can still place a bid to compete in the auction.
@@ -187,14 +185,14 @@ const AuctionBuyoutPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="text-sm text-red-600 mb-1">Current Highest Bid</div>
-                <div className="text-xl font-bold text-red-700">{formatPrice(auction.current_bid)}</div>
+                <div className="text-xl font-bold text-red-700">{formatVND(auction.current_bid)}</div>
                 <div className="text-xs text-red-600 mt-1">
                   {auction.bids?.length || 0} competing bidders
                 </div>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="text-sm text-green-600 mb-1">Buyout Price</div>
-                <div className="text-2xl font-bold text-green-700">{formatPrice(auction.buyout_price)}</div>
+                <div className="text-2xl font-bold text-green-700">{formatVND(auction.buyout_price)}</div>
                 <div className="text-xs text-green-600 mt-1">
                   Guaranteed booking
                 </div>
@@ -240,7 +238,7 @@ const AuctionBuyoutPage = () => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Buyout price ({auction.total_nights || 'N/A'} nights)</span>
-                <span className="font-medium">{formatPrice(auction.buyout_price)}</span>
+                <span className="font-medium">{formatVND(auction.buyout_price)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Service fees</span>
@@ -249,7 +247,7 @@ const AuctionBuyoutPage = () => {
               <div className="border-t border-gray-200 pt-3">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-green-600">{formatPrice(auction.buyout_price)}</span>
+                  <span className="text-green-600">{formatVND(auction.buyout_price)}</span>
                 </div>
               </div>
             </div>
@@ -269,7 +267,7 @@ const AuctionBuyoutPage = () => {
               disabled={processing}
               className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {processing ? 'Processing...' : `Buy Now - ${formatPrice(auction.buyout_price)}`}
+              {processing ? 'Processing...' : `Buy Now - ${formatVND(auction.buyout_price)}`}
             </button>
           </div>
 

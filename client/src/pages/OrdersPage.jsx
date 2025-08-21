@@ -5,6 +5,7 @@ import { Calendar, Clock, CreditCard, User, Phone, Users, Home, AlertCircle, Che
 import AccountNav from '@/components/ui/AccountNav';
 import Spinner from '@/components/ui/Spinner';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -164,7 +165,7 @@ const OrdersPage = () => {
                           <div className="flex items-center text-gray-700">
                             <CreditCard className="w-4 h-4 mr-3 text-gray-400" />
                             <div>
-                              <span className="font-semibold text-lg">${order.total_price}</span>
+                              <span className="font-semibold text-lg">{formatVND(order.total_price)}</span>
                               <span className="text-gray-500 ml-1">total</span>
                             </div>
                           </div>

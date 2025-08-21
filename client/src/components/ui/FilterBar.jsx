@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 
 const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
   const [filters, setFilters] = useState({
@@ -29,9 +30,6 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
     onFiltersChange(filters);
   }, [filters, onFiltersChange]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
 
   const handlePriceChange = (index, value) => {
     const newRange = [...filters.priceRange];
@@ -158,8 +156,8 @@ const FilterBar = ({ onFiltersChange, initialFilters = {} }) => {
 
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm text-gray-600">
-                            <span>₫{formatPrice(filters.priceRange[0])}</span>
-                            <span>₫{formatPrice(filters.priceRange[1])}</span>
+                            <span>{formatVND(filters.priceRange[0])}</span>
+                            <span>{formatVND(filters.priceRange[1])}</span>
                           </div>
                           <div className="relative h-2">
                             <div className="absolute w-full h-2 bg-gray-200 rounded-full"></div>

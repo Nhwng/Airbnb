@@ -1,6 +1,7 @@
 // src/components/admin/TransactionManagementModule.jsx
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 
 const ALL_STATUSES = ['confirmed', 'cancelled', 'completed'];
 
@@ -84,7 +85,7 @@ const TransactionManagementModule = () => {
                     {new Date(tx.check_out).toLocaleDateString()}
                   </td>
                   <td className="p-2">{tx.num_of_guests}</td>
-                  <td className="p-2">{tx.total_price.toLocaleString()} VND</td>
+                  <td className="p-2">{formatVND(tx.total_price)}</td>
                   <td className="p-2 capitalize">{tx.status}</td>
 
                   {/* Stack action buttons vertically with space */}

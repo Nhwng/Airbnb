@@ -3,6 +3,7 @@ import { useSearchParams, Navigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 
 const PaymentCallbackPage = () => {
@@ -137,7 +138,7 @@ const PaymentCallbackPage = () => {
                   <p><strong>Check-in:</strong> {new Date(reservation.check_in).toLocaleDateString()}</p>
                   <p><strong>Check-out:</strong> {new Date(reservation.check_out).toLocaleDateString()}</p>
                   <p><strong>Guests:</strong> {reservation.num_of_guests}</p>
-                  <p><strong>Total:</strong> ${reservation.total_price}</p>
+                  <p><strong>Total:</strong> {formatVND(reservation.total_price)}</p>
                 </div>
               </div>
             )}

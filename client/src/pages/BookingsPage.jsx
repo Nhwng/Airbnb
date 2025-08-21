@@ -6,6 +6,7 @@ import AccountNav from '@/components/ui/AccountNav';
 import PlaceImg from '@/components/ui/PlaceImg';
 import Spinner from '@/components/ui/Spinner';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
@@ -145,7 +146,7 @@ const BookingsPage = () => {
                       <div className="flex items-center text-gray-700">
                         <CreditCard className="w-4 h-4 mr-3 text-gray-400" />
                         <div className="text-sm">
-                          <span className="font-semibold">${booking.total_price}</span>
+                          <span className="font-semibold">{formatVND(booking.total_price)}</span>
                           <span className="text-gray-500 ml-1">total</span>
                         </div>
                       </div>

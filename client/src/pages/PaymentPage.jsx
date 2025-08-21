@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { Clock, AlertTriangle, User, Phone, Users, Calendar, CreditCard, Home, ArrowLeft, Shield } from 'lucide-react';
 
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '../../hooks';
 
@@ -230,7 +231,7 @@ const PaymentPage = () => {
                     <CreditCard className="w-5 h-5 text-gray-400 mr-2" />
                     <span className="text-lg font-medium text-gray-900">Total Amount</span>
                   </div>
-                  <span className="text-2xl font-bold text-gray-900">${order.total_price}</span>
+                  <span className="text-2xl font-bold text-gray-900">{formatVND(order.total_price)}</span>
                 </div>
               </div>
             </div>

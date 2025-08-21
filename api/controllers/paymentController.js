@@ -78,13 +78,22 @@ exports.createPayment = async (req, res) => {
     console.log('DEBUG - Original order amount:', amount);
 
     if (paymentMethod === 'zalopay') {
-      // Assume the order amount is already in VND, no conversion needed
-      // If your prices are in USD, uncomment the next line:
-      // const vndAmount = Math.round(amount * 24000);
-      console.log('DEBUG - Amount being sent to ZaloPay:', amount);
-      paymentResult = await createZaloPayOrder(amount, order.order_id, userData.user_id);
-      console.log('DEBUG - Amount after ZaloPay call:', amount);
-      // amount remains the same since it's already in VND
+      try {
+        // Assume the order amount is already in VND, no conversion needed
+        // If your prices are in USD, uncomment the next line:
+        // const vndAmount = Math.round(amount * 24000);
+        console.log('DEBUG - Amount being sent to ZaloPay:', amount);
+        paymentResult = await createZaloPayOrder(amount, order.order_id, userData.user_id);
+        console.log('DEBUG - Amount after ZaloPay call:', amount);
+        // amount remains the same since it's already in VND
+      } catch (zalopayError) {
+        console.error('ZaloPay service error:', zalopayError);
+        return res.status(503).json({
+          success: false,
+          message: 'ZaloPay service is currently unavailable. Please try again later or use a different payment method.',
+          error: 'ZALOPAY_SERVICE_ERROR'
+        });
+      }
     }
 
     const payment = await Payment.create({
@@ -358,33 +367,42 @@ exports.refreshPayment = async (req, res) => {
 
     // Only refresh ZaloPay payments (sandbox doesn't need refresh)
     if (payment.payment_method === 'zalopay') {
-      // Mark old payment as failed
-      payment.status = 'failed';
-      await payment.save();
+      try {
+        // Mark old payment as failed
+        payment.status = 'failed';
+        await payment.save();
 
-      // Create new ZaloPay payment
-      const paymentResult = await createZaloPayOrder(payment.amount, order.order_id, userData.user_id);
-      const transactionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        // Create new ZaloPay payment
+        const paymentResult = await createZaloPayOrder(payment.amount, order.order_id, userData.user_id);
+        const transactionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-      const newPayment = await Payment.create({
-        order_id: order.order_id,
-        user_id: userData.user_id,
-        amount: payment.amount,
-        currency: payment.currency,
-        payment_method: 'zalopay',
-        transaction_id: transactionId,
-        external_transaction_id: paymentResult?.app_trans_id,
-        gateway_response: paymentResult,
-        callback_url: zalopayConfig.callback_url,
-        return_url: payment.return_url
-      });
+        const newPayment = await Payment.create({
+          order_id: order.order_id,
+          user_id: userData.user_id,
+          amount: payment.amount,
+          currency: payment.currency,
+          payment_method: 'zalopay',
+          transaction_id: transactionId,
+          external_transaction_id: paymentResult?.app_trans_id,
+          gateway_response: paymentResult,
+          callback_url: zalopayConfig.callback_url,
+          return_url: payment.return_url
+        });
 
-      return res.status(200).json({
-        success: true,
-        message: 'Payment refreshed successfully',
-        payment: newPayment,
-        paymentUrl: paymentResult?.order_url || null
-      });
+        return res.status(200).json({
+          success: true,
+          message: 'Payment refreshed successfully',
+          payment: newPayment,
+          paymentUrl: paymentResult?.order_url || null
+        });
+      } catch (zalopayError) {
+        console.error('ZaloPay refresh error:', zalopayError);
+        return res.status(503).json({
+          success: false,
+          message: 'ZaloPay service is currently unavailable. Cannot refresh payment at this time.',
+          error: 'ZALOPAY_SERVICE_ERROR'
+        });
+      }
     } else {
       // For sandbox or other methods, just return existing payment
       return res.status(200).json({

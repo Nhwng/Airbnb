@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MapPin, Users, Home, Star } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import { useAuth } from '../../hooks';
 import AccountNav from '@/components/ui/AccountNav';
 import Spinner from '@/components/ui/Spinner';
@@ -61,9 +62,6 @@ const FavoritesPage = () => {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
 
   if (!user) {
     return (
@@ -225,7 +223,7 @@ const FavoritesPage = () => {
                       </div>
 
                       <div className="flex items-center text-gray-700">
-                        <span className="font-semibold text-lg">₫{formatPrice(listing.nightly_price)}</span>
+                        <span className="font-semibold text-lg">{formatVND(listing.nightly_price)}</span>
                         <span className="text-gray-500 ml-1 text-sm">/ night</span>
                       </div>
                     </div>

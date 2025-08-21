@@ -11,7 +11,8 @@ import {
   Calendar,
   Home
 } from 'lucide-react';
-import axiosInstance from '@/utils/axios'; 
+import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils'; 
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '../../hooks';
 
@@ -65,9 +66,6 @@ const AuctionDetailPage = () => {
     return () => clearInterval(interval);
   }, [auction]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -235,7 +233,7 @@ const AuctionDetailPage = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-rose-900 mb-2">
-                  {formatPrice(auction.current_bid)}
+                  {formatVND(auction.current_bid)}
                 </div>
                 <div className="text-sm text-rose-700">
                   {auction.bids?.length || 0} bids placed
@@ -246,11 +244,11 @@ const AuctionDetailPage = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Starting Price:</span>
-                  <span className="text-gray-400 line-through">{formatPrice(auction.starting_price)}</span>
+                  <span className="text-gray-400 line-through">{formatVND(auction.starting_price)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Buyout Price:</span>
-                  <span className="font-medium text-green-600">{formatPrice(auction.buyout_price)}</span>
+                  <span className="font-medium text-green-600">{formatVND(auction.buyout_price)}</span>
                 </div>
               </div>
 
@@ -269,7 +267,7 @@ const AuctionDetailPage = () => {
                       to={`/auctions/${auction._id}/buyout`}
                       className="w-full inline-flex items-center justify-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
                     >
-                      Buy Now - {formatPrice(auction.buyout_price)}
+                      Buy Now - {formatVND(auction.buyout_price)}
                     </Link>
                   ) : (
                     <div className="w-full inline-flex items-center justify-center px-4 py-3 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed opacity-60">
@@ -297,7 +295,7 @@ const AuctionDetailPage = () => {
                   {auction.bids.slice(0, 5).map((bid, index) => (
                     <div key={bid._id || index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
                       <div>
-                        <div className="font-medium text-gray-900">{formatPrice(bid.bid_amount)}</div>
+                        <div className="font-medium text-gray-900">{formatVND(bid.bid_amount)}</div>
                         <div className="text-xs text-gray-500">
                           by {bid.bidder?.name || 'Anonymous'}
                         </div>

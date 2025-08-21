@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import { MapPin, Users, Star } from 'lucide-react';
 
 const DEFAULT_IMAGE_URL = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
@@ -199,7 +200,7 @@ const PlaceCard = ({ place, images }) => {
           </div>
           <div className="text-right">
             <div className="font-semibold text-gray-900">
-              ₫{nightly_price?.toLocaleString() || '0'}
+              {formatVND(nightly_price)}
             </div>
             <div className="text-sm text-gray-500">per night</div>
           </div>

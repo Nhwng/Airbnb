@@ -10,6 +10,7 @@ import {
   Calendar
 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 
 const DashboardView = () => {
@@ -142,7 +143,7 @@ const DashboardView = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">₫{order.total_price?.toLocaleString()}</p>
+                  <p className="font-semibold text-gray-900">{formatVND(order.total_price)}</p>
                   <p className={`text-xs px-2 py-1 rounded-full ${
                     order.status === 'pending' 
                       ? 'bg-amber-100 text-amber-800' 

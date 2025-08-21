@@ -13,6 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'react-toastify';
 
@@ -57,9 +58,6 @@ const ListingsView = () => {
     setFilters({ ...filters, page: newPage });
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
 
   if (loading) return <Spinner />;
 
@@ -134,7 +132,7 @@ const ListingsView = () => {
                 <div className="flex items-center text-gray-700">
                   <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
                   <span className="font-semibold text-rose-600">
-                    ₫{formatPrice(listing.nightly_price)}
+                    {formatVND(listing.nightly_price)}
                   </span>
                   <span className="text-gray-500 ml-1 text-sm">/ night</span>
                 </div>

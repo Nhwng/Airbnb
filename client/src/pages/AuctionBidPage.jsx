@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Gavel, ArrowLeft, AlertCircle } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '../../hooks';
 
@@ -42,9 +43,6 @@ const AuctionBidPage = () => {
     }
   }, [id, user, navigate]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
-  };
 
   const getMinimumIncrement = (currentBid) => {
     // Dynamic minimum increment based on current bid amount
@@ -76,7 +74,7 @@ const AuctionBidPage = () => {
       const minimumBid = auction.current_bid + minIncrement;
       
       if (!isValidBid(bidValue)) {
-        throw new Error(`Bid must be at least ${formatPrice(minIncrement)} higher than current bid. Minimum bid: ${formatPrice(minimumBid)}`);
+        throw new Error(`Bid must be at least ${formatVND(minIncrement)} higher than current bid. Minimum bid: ${formatVND(minimumBid)}`);
       }
 
       await axiosInstance.post(`/auctions/${id}/bid`, {
@@ -161,11 +159,11 @@ const AuctionBidPage = () => {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <div className="text-sm text-gray-600 mb-1">Current Highest Bid</div>
-                <div className="text-2xl font-bold text-gray-900">{formatPrice(auction.current_bid)}</div>
+                <div className="text-2xl font-bold text-gray-900">{formatVND(auction.current_bid)}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Buyout Price</div>
-                <div className="text-xl font-semibold text-green-600">{formatPrice(auction.buyout_price)}</div>
+                <div className="text-xl font-semibold text-green-600">{formatVND(auction.buyout_price)}</div>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
@@ -191,13 +189,13 @@ const AuctionBidPage = () => {
                     ? 'border-red-300 bg-red-50' 
                     : 'border-gray-300'
                 }`}
-                placeholder={`Minimum: ${formatPrice(getMinimumBid())}`}
+                placeholder={`Minimum: ${formatVND(getMinimumBid())}`}
               />
               {bidAmount && !isValidBid(parseInt(bidAmount)) ? (
                 <p className="mt-2 text-sm text-red-600">
                   ⚠️ {parseInt(bidAmount) < getMinimumBid() 
-                    ? `Bid too low. Minimum required: ${formatPrice(getMinimumBid())}` 
-                    : `Bid too high. Must be less than buyout price: ${formatPrice(auction.buyout_price)}`}
+                    ? `Bid too low. Minimum required: ${formatVND(getMinimumBid())}` 
+                    : `Bid too high. Must be less than buyout price: ${formatVND(auction.buyout_price)}`}
                 </p>
               ) : bidAmount && isValidBid(parseInt(bidAmount)) ? (
                 <p className="mt-2 text-sm text-green-600">
@@ -205,7 +203,7 @@ const AuctionBidPage = () => {
                 </p>
               ) : (
                 <p className="mt-2 text-sm text-gray-600">
-                  Your bid must be at least {formatPrice(getMinimumIncrement(auction.current_bid))} higher than the current bid of {formatPrice(auction.current_bid)} and less than the buyout price of {formatPrice(auction.buyout_price)}. You can bid any amount between {formatPrice(getMinimumBid())} and {formatPrice(auction.buyout_price - 1)}.
+                  Your bid must be at least {formatVND(getMinimumIncrement(auction.current_bid))} higher than the current bid of {formatVND(auction.current_bid)} and less than the buyout price of {formatVND(auction.buyout_price)}. You can bid any amount between {formatVND(getMinimumBid())} and {formatVND(auction.buyout_price - 1)}.
                 </p>
               )}
             </div>
@@ -225,7 +223,7 @@ const AuctionBidPage = () => {
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• All bids are binding and cannot be retracted</li>
                 <li>• You must complete payment within 24 hours if you win</li>
-                <li>• Minimum increment: {formatPrice(getMinimumIncrement(auction.current_bid))} above current bid (you can bid any amount above this)</li>
+                <li>• Minimum increment: {formatVND(getMinimumIncrement(auction.current_bid))} above current bid (you can bid any amount above this)</li>
                 <li>• You cannot bid on your own auction</li>
                 <li>• Consider using buyout for guaranteed booking</li>
               </ul>
@@ -245,7 +243,7 @@ const AuctionBidPage = () => {
                 disabled={submitting || !bidAmount || !isValidBid(parseInt(bidAmount))}
                 className="px-6 py-3 bg-rose-600 text-white font-medium rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {submitting ? 'Placing Bid...' : `Place Bid - ${bidAmount ? formatPrice(parseInt(bidAmount)) : '₫0'}`}
+                {submitting ? 'Placing Bid...' : `Place Bid - ${bidAmount ? formatVND(parseInt(bidAmount)) : '₫0'}`}
               </button>
             </div>
           </form>
@@ -258,7 +256,7 @@ const AuctionBidPage = () => {
                 to={`/auctions/${id}/buyout`}
                 className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
               >
-                Buy Now - {formatPrice(auction.buyout_price)}
+                Buy Now - {formatVND(auction.buyout_price)}
               </Link>
             ) : (
               <div className="inline-flex items-center px-6 py-3 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed opacity-60">

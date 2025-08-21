@@ -12,6 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
+import { formatVND } from '@/utils';
 import Spinner from '@/components/ui/Spinner';
 
 const AuctionRequestCard = ({ request, onUpdate }) => {
@@ -50,9 +51,6 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
     });
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
-  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -134,7 +132,7 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
                   </div>
                   <div>
                     <span className="text-gray-500">Base Price:</span>
-                    <span className="ml-2 font-medium">{formatPrice(request.listing?.nightly_price || 0)}/night</span>
+                    <span className="ml-2 font-medium">{formatVND(request.listing?.nightly_price || 0)}/night</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Total Nights:</span>
