@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Image = require('../models/Image');
 const Order = require('../models/Order');
 const Availability = require('../models/Availability');
+const sseManager = require('../services/sseManager');
 
 // Helper function to create order for auction winner
 const createAuctionOrder = async (auction, winnerId, finalPrice, orderType = 'auction') => {
@@ -533,6 +534,27 @@ exports.placeBid = async (req, res) => {
     auction.total_bids += 1;
     await auction.save();
 
+    // Broadcast bid update to all connected users via SSE
+    const bidUpdateData = {
+      type: 'bidUpdate',
+      auctionId: auction._id.toString(),
+      bid: {
+        bidder_id: userData.user_id,
+        bidder_name: `${userData.first_name} ${userData.last_name}`.trim(),
+        bid_amount: Number(bid_amount),
+        timestamp: bid.created_at
+      },
+      auction: {
+        current_bid: auction.current_bid,
+        highest_bidder: auction.highest_bidder,
+        total_bids: auction.total_bids
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to all users except the bidder (they already know about their bid)
+    sseManager.broadcast(auction._id.toString(), bidUpdateData, userData.user_id);
+
     res.status(201).json({
       message: 'Bid placed successfully',
       bid: bid,
@@ -655,6 +677,27 @@ exports.buyoutAuction = async (req, res) => {
     auction.highest_bidder = userData.user_id;
     await auction.save();
 
+    // Broadcast buyout event to all connected users via SSE
+    const buyoutUpdateData = {
+      type: 'auctionEnded',
+      reason: 'buyout',
+      auctionId: auction._id.toString(),
+      winner: {
+        user_id: userData.user_id,
+        name: `${userData.first_name} ${userData.last_name}`.trim()
+      },
+      final_price: auction.buyout_price,
+      auction: {
+        status: 'ended',
+        current_bid: auction.current_bid,
+        highest_bidder: auction.highest_bidder
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to all users (including the buyer for confirmation)
+    sseManager.broadcast(auction._id.toString(), buyoutUpdateData);
+
     // Create order for the buyout winner
     let order = null;
     try {
@@ -767,6 +810,65 @@ exports.processEndedAuctionsEndpoint = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error processing ended auctions',
+      error: error.message
+    });
+  }
+};
+
+// SSE endpoint for real-time auction updates
+exports.auctionSSE = async (req, res) => {
+  const { auctionId } = req.params;
+  const userData = req.user;
+
+  if (!userData) {
+    return res.status(401).json({ message: 'Authentication required for SSE connection' });
+  }
+
+  // Verify auction exists
+  try {
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({ message: 'Auction not found' });
+    }
+  } catch (error) {
+    return res.status(400).json({ message: 'Invalid auction ID' });
+  }
+
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': process.env.CLIENT_URL || 'http://localhost:5173',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // Add connection to SSE manager
+  sseManager.addConnection(auctionId, userData.user_id, res);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    sseManager.removeConnection(auctionId, userData.user_id);
+  });
+
+  req.on('aborted', () => {
+    sseManager.removeConnection(auctionId, userData.user_id);
+  });
+};
+
+// Get SSE connection statistics (for debugging)
+exports.getSSEStats = async (req, res) => {
+  try {
+    const stats = sseManager.getStats();
+    res.status(200).json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error getting SSE statistics',
       error: error.message
     });
   }

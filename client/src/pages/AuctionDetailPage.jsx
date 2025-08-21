@@ -15,13 +15,26 @@ import axiosInstance from '@/utils/axios';
 import { formatVND } from '@/utils'; 
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '../../hooks';
+import { useAuctionUpdates } from '@/hooks/useAuctionSSE';
 
 const AuctionDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const [auction, setAuction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState(null);
+
+  // Use SSE hook for real-time updates
+  const {
+    auction,
+    setAuction,
+    recentBids,
+    notifications,
+    removeNotification,
+    connectionStatus,
+    isConnected,
+    hasError,
+    error
+  } = useAuctionUpdates(id);
 
   useEffect(() => {
     const fetchAuctionDetails = async () => {
@@ -119,6 +132,66 @@ const AuctionDetailPage = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Auctions
           </Link>
+        </div>
+
+        {/* Connection Status & Notifications */}
+        <div className="mb-6 space-y-3">
+          {/* Connection Status */}
+          <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm border">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-green-500' :
+                connectionStatus === 'connecting' ? 'bg-yellow-500' :
+                hasError ? 'bg-red-500' : 'bg-gray-400'
+              }`}></div>
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Real-time updates active' :
+                 connectionStatus === 'connecting' ? 'Connecting to live updates...' :
+                 hasError ? `Connection error: ${error}` : 'Not connected'}
+              </span>
+            </div>
+            {hasError && (
+              <button
+                onClick={() => window.location.reload()}
+                className="text-xs text-rose-600 hover:text-rose-700 underline"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+
+          {/* Live Notifications */}
+          {notifications.length > 0 && (
+            <div className="space-y-2">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
+                    notification.type === 'bid' ? 'bg-blue-50 border-blue-400' :
+                    notification.type === 'auction_ended' ? 'bg-green-50 border-green-400' :
+                    'bg-gray-50 border-gray-400'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    {notification.type === 'bid' && <TrendingUp className="w-4 h-4 text-blue-500" />}
+                    {notification.type === 'auction_ended' && <Gavel className="w-4 h-4 text-green-500" />}
+                    <span className="text-sm font-medium text-gray-900">
+                      {notification.message}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(notification.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeNotification(notification.id)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -288,11 +361,31 @@ const AuctionDetailPage = () => {
             </div>
 
             {/* Recent Bids */}
-            {auction.bids && auction.bids.length > 0 && (
+            {(auction.bids?.length > 0 || recentBids.length > 0) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Bids</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  Recent Bids
+                  {isConnected && <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">Live</span>}
+                </h3>
                 <div className="space-y-3">
-                  {auction.bids.slice(0, 5).map((bid, index) => (
+                  {/* Show real-time bids first */}
+                  {recentBids.slice(0, 3).map((bid, index) => (
+                    <div key={`live-${bid.bidder_id}-${bid.timestamp}`} className="flex justify-between items-center py-2 border-b border-gray-100 bg-blue-50 px-3 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-900 flex items-center">
+                          {bid.bidder_name}
+                          <span className="ml-2 text-xs text-blue-600 bg-blue-200 px-2 py-1 rounded-full">New</span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(bid.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                      <div className="font-medium text-gray-900">{formatVND(bid.bid_amount)}</div>
+                    </div>
+                  ))}
+                  
+                  {/* Show original bids */}
+                  {auction.bids?.slice(0, Math.max(0, 5 - recentBids.length)).map((bid, index) => (
                     <div key={bid._id || index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
                       <div>
                         <div className="font-medium text-gray-900">{formatVND(bid.bid_amount)}</div>

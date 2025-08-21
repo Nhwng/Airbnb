@@ -86,7 +86,7 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
           </div>
           <div className="flex items-center text-gray-700">
             <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm font-medium">Starting: {formatPrice(request.starting_price)}</span>
+            <span className="text-sm font-medium">Starting: {formatVND(request.starting_price)}</span>
           </div>
           <div className="flex items-center text-gray-700">
             <Calendar className="w-4 h-4 mr-2 text-gray-400" />
@@ -102,7 +102,7 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="flex items-center text-gray-700">
             <Gavel className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm">Buyout: {formatPrice(request.buyout_price)}</span>
+            <span className="text-sm">Buyout: {formatVND(request.buyout_price)}</span>
           </div>
           <div className="flex items-center text-gray-700">
             <Calendar className="w-4 h-4 mr-2 text-gray-400" />
@@ -170,16 +170,16 @@ const AuctionRequestCard = ({ request, onUpdate }) => {
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <div className="text-gray-500 mb-1">Starting Price</div>
-                    <div className="font-bold text-gray-900">{formatPrice(request.starting_price)}</div>
+                    <div className="font-bold text-gray-900">{formatVND(request.starting_price)}</div>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
                     <div className="text-green-600 mb-1">Buyout Price</div>
-                    <div className="font-bold text-green-900">{formatPrice(request.buyout_price)}</div>
+                    <div className="font-bold text-green-900">{formatVND(request.buyout_price)}</div>
                   </div>
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
                     <div className="text-blue-600 mb-1">Price Difference</div>
                     <div className="font-bold text-blue-900">
-                      {formatPrice(request.buyout_price - request.starting_price)}
+                      {formatVND(request.buyout_price - request.starting_price)}
                     </div>
                   </div>
                 </div>

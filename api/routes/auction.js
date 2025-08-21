@@ -11,7 +11,9 @@ const {
   placeBid,
   getAuctionDetails,
   buyoutAuction,
-  processEndedAuctionsEndpoint
+  processEndedAuctionsEndpoint,
+  auctionSSE,
+  getSSEStats
 } = require('../controllers/auctionController');
 
 // Host routes (require authentication)
@@ -26,11 +28,15 @@ router.route('/admin/request/:requestId').put(isLoggedIn, updateAuctionRequestSt
 router.route('/active').get(getActiveAuctions);
 router.route('/:auctionId').get(getAuctionDetails);
 
+// SSE (Server-Sent Events) routes for real-time updates
+router.route('/:auctionId/events').get(isLoggedIn, auctionSSE);
+
 // User bidding routes (require authentication)
 router.route('/:auctionId/bid').post(isLoggedIn, placeBid);
 router.route('/:auctionId/buyout').post(isLoggedIn, buyoutAuction);
 
 // Admin/system routes
 router.route('/admin/process-ended').post(isLoggedIn, processEndedAuctionsEndpoint);
+router.route('/admin/sse-stats').get(isLoggedIn, getSSEStats);
 
 module.exports = router;
