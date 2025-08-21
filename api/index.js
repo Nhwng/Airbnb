@@ -52,8 +52,16 @@ app.use("/", require("./routes"));
 // Data sync cron job (existing)
 cron.schedule('0 2 * * *', () => {
   console.log('Running scheduled data sync at ' + new Date().toLocaleString());
-  const scriptPath = path.join(__dirname, 'scripts/scrape_data.py'); // Đường dẫn đến script tích hợp
-  exec(`python ${scriptPath}`, (error, stdout, stderr) => {
+  
+  const today = new Date();
+  const checkIn = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  const futureDate = new Date(today);
+  futureDate.setDate(today.getDate() + 5);
+  const checkOut = futureDate.toISOString().split('T')[0];
+  
+  const scriptPath = path.join(__dirname, 'scripts/scrape_data.py');
+  exec(`python ${scriptPath} ${checkIn} ${checkOut}`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Cron error: ${error}`);
       return;

@@ -6,7 +6,8 @@ import {
   ShoppingCart, 
   BarChart3,
   ChevronRight,
-  Gavel
+  Gavel,
+  Database  // Thêm icon Database
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeModule, setActiveModule }) => {
@@ -73,6 +74,15 @@ const AdminSidebar = ({ activeModule, setActiveModule }) => {
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
       hoverColor: 'hover:bg-indigo-100'
+    },
+    {
+      id: 'dataSync',
+      label: 'Data Synchronization',
+      description: 'Sync Airbnb data',
+      icon: Database,
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-50',
+      hoverColor: 'hover:bg-teal-100'
     }
   ];
 

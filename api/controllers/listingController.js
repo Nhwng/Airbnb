@@ -539,25 +539,33 @@ exports.searchListings = async (req, res) => {
   }
 };
 
+// Add or update the syncData function in listingController.js
 exports.triggerDataSync = async (req, res) => {
   try {
-    const userData = req.user;
-    // Giả định chỉ host có quyền kích hoạt
-    if (!userData) {
-      return res.status(403).json({ message: 'Unauthorized: Only hosts can sync data' });
+    const { checkIn, checkOut } = req.body;
+    
+    if (!checkIn || !checkOut) {
+      return res.status(400).json({ message: 'Check-in and check-out dates are required' });
     }
 
-    const scriptPath = path.join(__dirname, '../scripts/scrape_data.py'); // Đường dẫn đến script tích hợp
-    exec(`python ${scriptPath}`, (error, stdout, stderr) => {
+    const scriptPath = path.join(__dirname, '../scripts/scrape_data.py');
+    exec(`python ${scriptPath} ${checkIn} ${checkOut}`, (error, stdout, stderr) => {
       if (error) {
-        console.error(`exec error: ${error}`);
-        return res.status(500).json({ message: 'Error executing data sync script', error: stderr });
+        console.error(`Sync error: ${error}`);
+        return res.status(500).json({ message: 'Error during data sync', error: error.message });
       }
-      console.log(`Script stdout: ${stdout}`);
-      res.status(200).json({ message: 'Data sync completed successfully', output: stdout });
+      console.log(`Sync stdout: ${stdout}`);
+      if (stderr) {
+        console.error(`Sync stderr: ${stderr}`);
+      }
+      res.status(200).json({ message: 'Data sync initiated successfully' });
     });
   } catch (err) {
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    console.error('Sync data error:', err);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: err.message,
+    });
   }
 };
 

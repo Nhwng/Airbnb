@@ -35,7 +35,6 @@ import AuctionDetailPage from './pages/AuctionDetailPage';
 import AuctionBidPage from './pages/AuctionBidPage';
 import AuctionBuyoutPage from './pages/AuctionBuyoutPage';
 
-import DataSyncPage from './pages/DataSyncPage';
 function App() {
   useEffect(() => {
     // set the token on refreshing the website
@@ -74,7 +73,6 @@ function App() {
                       <Route path="/auctions/:id/bid" element={<AuctionBidPage />} />
                       <Route path="/auctions/:id/buyout" element={<AuctionBuyoutPage />} />
                       <Route path="/admin" element={<AdminPage />} />
-                      <Route path="/datascraper" element={<DataSyncPage />} /> 
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
                   </Routes>

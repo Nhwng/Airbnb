@@ -35,24 +35,21 @@ export default function StatisticsManagementModule() {
   const [series, setSeries] = useState([]);
   const [topListings, setTopListings] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [catalog, setCatalog] = useState({ byRoomType: [], byCity: [] });
   const [loading, setLoading] = useState(true);
 
   async function load() {
     setLoading(true);
     try {
-      const [ovr, ser, tops, cus, cat] = await Promise.all([
+      const [ovr, ser, tops, cus] = await Promise.all([
         axiosInstance.get('/statistics/overview', { params: { from, to } }),
         axiosInstance.get('/statistics/revenue-series', { params: { from, to, granularity } }),
         axiosInstance.get('/statistics/top-listings', { params: { limit: 5 } }),
         axiosInstance.get('/statistics/customers', { params: { limit: 8 } }),
-        axiosInstance.get('/statistics/catalog'),
       ]);
       setOverview(ovr.data);
       setSeries(ser.data.items || []);
       setTopListings(tops.data.items || []);
       setCustomers(cus.data.items || []);
-      setCatalog(cat.data || {});
     } catch (err) {
       console.error('Load statistics error:', err);
     } finally {
@@ -137,27 +134,6 @@ export default function StatisticsManagementModule() {
             rows={customers.map((x, i) => [i+1, x.name || `User ${x.user_id}`, x.payments, fmt(x.revenue)])}
           />
         </Card>
-      </div>
-
-      {/* Catalog / Category */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Catalog insights</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-medium mb-2">By Room Type</h4>
-            <Table
-              columns={['Room Type', 'Listings', 'Avg Nightly Price']}
-              rows={catalog.byRoomType.map(x => [x._id || '-', fmt(x.listings), fmt(Math.round(x.avgPrice || 0))])}
-            />
-          </div>
-          <div>
-            <h4 className="font-medium mb-2">Top Cities</h4>
-            <Table
-              columns={['City', 'Listings', 'Avg Nightly Price']}
-              rows={catalog.byCity.map(x => [x._id || '-', fmt(x.listings), fmt(Math.round(x.avgPrice || 0))])}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );

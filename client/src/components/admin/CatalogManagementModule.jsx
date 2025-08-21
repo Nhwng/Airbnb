@@ -1,19 +1,17 @@
-// src/components/admin/CatalogManagementModule.jsx
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
 
 const CatalogManagementModule = () => {
-  // === B: Catalog state ===
+  // === Catalog state ===
   const [homeTypes, setHomeTypes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // === C: Listings state ===
+  // === Listings state ===
   const [listings, setListings] = useState([]);
   const [listingsLoading, setListingsLoading] = useState(true);
 
-  // === Form state for Category/Subtype ===
-  const [newCategory, setNewCategory] = useState({ name: '', description: '', image: '' });
+  // === Form state for Subtype ===
   const [newSubtype, setNewSubtype] = useState({ name: '', description: '', image: '' });
   const [selectedHomeTypeId, setSelectedHomeTypeId] = useState('');
 
@@ -46,29 +44,7 @@ const CatalogManagementModule = () => {
     }
   };
 
-  // --- B1: Add a new HomeType (Category) ---
-  const addCategory = async e => {
-    e.preventDefault();
-    try {
-      await axiosInstance.post('/listings/hometypes', newCategory);
-      setNewCategory({ name: '', description: '', image: '' });
-      fetchCatalog();
-    } catch (err) {
-      console.error('Error adding category:', err);
-    }
-  };
-
-  // --- B2: Delete a HomeType ---
-  const deleteCategory = async id => {
-    try {
-      await axiosInstance.delete(`/listings/hometypes/${id}`);
-      fetchCatalog();
-    } catch (err) {
-      console.error('Error deleting category:', err);
-    }
-  };
-
-  // --- B3: Add a Subtype ---
+  // --- Add a Subtype ---
   const addSubtype = async e => {
     e.preventDefault();
     if (!selectedHomeTypeId) return;
@@ -85,7 +61,17 @@ const CatalogManagementModule = () => {
     }
   };
 
-  // --- B4: Delete a Subtype ---
+  // --- Delete a HomeType ---
+  const deleteCategory = async id => {
+    try {
+      await axiosInstance.delete(`/listings/hometypes/${id}`);
+      fetchCatalog();
+    } catch (err) {
+      console.error('Error deleting category:', err);
+    }
+  };
+
+  // --- Delete a Subtype ---
   const deleteSubtype = async (homeTypeId, subId) => {
     try {
       await axiosInstance.delete(
@@ -97,7 +83,7 @@ const CatalogManagementModule = () => {
     }
   };
 
-  // --- C1: Update listing.room_type BY ObjectId ---
+  // --- Update listing.room_type BY ObjectId ---
   const updateListingRoomType = async (objectId, newRoomType) => {
     try {
       await axiosInstance.put('/listings/update', {
@@ -110,7 +96,7 @@ const CatalogManagementModule = () => {
     }
   };
 
-  // --- C2: Delete a listing BY ObjectId ---
+  // --- Delete a listing BY ObjectId ---
   const deleteListing = async objectId => {
     try {
       await axiosInstance.delete(`/listings/${objectId}`);
@@ -126,41 +112,8 @@ const CatalogManagementModule = () => {
 
   return (
     <div className="space-y-8 bg-white rounded-xl p-6 border">
-      {/* === B. Catalog Management === */}
+      {/* === Catalog Management === */}
       <section className="space-y-6">
-        {/* Add Category */}
-        <form onSubmit={addCategory} className="space-y-2">
-          <h3 className="text-xl font-semibold">Add New Category</h3>
-          <input
-            type="text"
-            required
-            value={newCategory.name}
-            onChange={e => setNewCategory({ ...newCategory, name: e.target.value })}
-            placeholder="Category Name"
-            className="w-full p-2 border rounded"
-          />
-          <input
-            type="text"
-            value={newCategory.description}
-            onChange={e => setNewCategory({ ...newCategory, description: e.target.value })}
-            placeholder="Description"
-            className="w-full p-2 border rounded"
-          />
-          <input
-            type="text"
-            value={newCategory.image}
-            onChange={e => setNewCategory({ ...newCategory, image: e.target.value })}
-            placeholder="Image URL"
-            className="w-full p-2 border rounded"
-          />
-          <button
-            type="submit"
-            className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          >
-            <Plus className="w-4 h-4" /> Add Category
-          </button>
-        </form>
-
         {/* Add Subtype */}
         <form onSubmit={addSubtype} className="space-y-2">
           <h3 className="text-xl font-semibold">Add New Subtype</h3>
@@ -182,7 +135,7 @@ const CatalogManagementModule = () => {
             type="text"
             required
             value={newSubtype.name}
-            onChange={e => setNewSubtype({ ...newSubtype, name: e.target.value })}
+            onChange={e => setNewSubtype({ ...newSubtype, name: esubjects.target.value })}
             placeholder="Subtype Name"
             className="w-full p-2 border rounded"
           />
@@ -237,7 +190,7 @@ const CatalogManagementModule = () => {
         </div>
       </section>
 
-      {/* === C. Listings Management === */}
+      {/* === Listings Management === */}
       <section>
         <h3 className="text-xl font-semibold mb-2">Listings Management</h3>
 
