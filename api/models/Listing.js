@@ -6,22 +6,21 @@ const listingSchema = new mongoose.Schema({
   currency: { type: String, required: true },
   description: { type: String, required: true },
   host_id: { type: Number, required: true },
-  latitude: { type: Number, required: true },
-  longitude: { type: Number, required: true },
   nightly_price: { type: Number, required: true },
   person_capacity: { type: Number, required: true },
   room_type: { type: String, required: true },
   title: { type: String, required: true },
-  city: { type: String, required: true }
+  city: { type: String, required: true },
+  address: { type: String }
 });
 
 listingSchema.pre('save', function (next) {
-  console.log('Pre-save hook triggered with data:', this.toObject()); // Debug
+  console.log('Pre-save hook triggered with data:', this.toObject());
   next();
 });
 
 listingSchema.pre('findOneAndUpdate', function (next) {
-  console.log('Pre-findOneAndUpdate hook triggered with data:', this.getUpdate()); // Debug
+  console.log('Pre-findOneAndUpdate hook triggered with data:', this.getUpdate());
   next();
 });
 

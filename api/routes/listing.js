@@ -35,6 +35,8 @@ router.route('/hometypes').post(isAdmin, createHomeType);
 router.route('/hometypes/:id/subtypes').post(isAdmin, addSubtype);
 router.route('/hometypes/:id').delete(isAdmin, deleteHomeType);
 router.route('/hometypes/:id/subtypes/:subId').delete(isAdmin, deleteSubtype);
+// Delete host room listing
+router.delete('/user-listings/:listingId', require('../middlewares/user').isLoggedIn, require('../controllers/listingController').deleteUserListing);
 
 // IMPORTANT: This route must come LAST because it uses :id which matches everything
 router.route('/:id').get(singleListing).delete(isLoggedIn, deleteListing);

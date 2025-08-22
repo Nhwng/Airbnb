@@ -66,6 +66,7 @@ router.use('/availability', require('./availability'));
 router.use('/favorites', require('./favorite'));
 router.use('/admin', require('./admin'));
 router.use('/auctions', require('./auction'));
+router.use('/cities', require('./city'));
 
 // Forgot password
 router.use('/', require('./forgotPassword'));

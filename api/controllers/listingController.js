@@ -39,30 +39,37 @@ exports.addListing = async (req, res) => {
     const {
       title,
       description,
-      currency,
       nightly_price,
       person_capacity,
       room_type,
-      latitude,
-      longitude,
-      city
+      city,
+      address,
+      photos
     } = req.body;
-
 
     const listingData = {
       host_id: Number(userData.user_id),
       listing_id: Math.floor(100000 + Math.random() * 900000),
       title,
       description,
-      currency,
+      currency: 'VND',
       nightly_price: Number(nightly_price),
       person_capacity: Number(person_capacity),
       room_type,
-      latitude: Number(latitude),
-      longitude: Number(longitude),
-      city
+      city,
+      address
     };
     const listing = await Listing.create(listingData);
+
+    // lưu ảnh phòng vào collection images
+    if (Array.isArray(photos) && photos.length > 0) {
+      const imageDocs = photos.map((url, idx) => ({
+        listing_id: listing.listing_id,
+        url,
+        caption: `Room image ${idx + 1}`
+      }));
+      await Image.insertMany(imageDocs);
+    }
 
     res.status(200).json({
       listing,
@@ -640,20 +647,34 @@ exports.updateListing = async (req, res) => {
   try {
     const userData = req.user;
     const { id, ...fields } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid listing id' });
+    let listing = null;
+    // tìm theo listing_id
+    if (!isNaN(Number(id))) {
+      listing = await Listing.findOne({ listing_id: Number(id) });
     }
-    // Lấy document trước để check quyền
-    const listing = await Listing.findById(id);
+    // tìm theo ObjectId, nếu không thấy
+    if (!listing && mongoose.Types.ObjectId.isValid(id)) {
+      listing = await Listing.findById(id);
+    }
     if (!listing) {
       return res.status(404).json({ message: 'Listing not found' });
     }
     if (listing.host_id !== userData.user_id && userData.role !== 'admin') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
-    // Chỉ $set những trường có trong fields
+    // Nếu có ảnh mới, thêm vào collection images
+    if (Array.isArray(fields.photos) && fields.photos.length > 0) {
+      const imageDocs = fields.photos.map((url, idx) => ({
+        listing_id: listing.listing_id,
+        url,
+        caption: `Room image ${idx + 1}`
+      }));
+      await Image.insertMany(imageDocs);
+      delete fields.photos;
+    }
+    // Cập nhật theo _id
     const updated = await Listing.findByIdAndUpdate(
-      id,
+      listing._id,
       { $set: fields },
       { new: true, runValidators: true }
     );
@@ -669,23 +690,22 @@ exports.deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
     const userData = req.user;
-
-    // 1) Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid listing id' });
+    let listing = null;
+    // tìm theo listing_id
+    if (!isNaN(Number(id))) {
+      listing = await Listing.findOne({ listing_id: Number(id) });
     }
-    const listing = await Listing.findById(id);
+    // thử tìm theo ObjectId, nếu không thấy
+    if (!listing && mongoose.Types.ObjectId.isValid(id)) {
+      listing = await Listing.findById(id);
+    }
     if (!listing) {
       return res.status(404).json({ message: 'Listing not found' });
     }
-
-    // 2) Kiểm tra quyền
     if (listing.host_id !== userData.user_id && userData.role !== 'admin') {
       return res.status(403).json({ message: 'Unauthorized to delete this listing' });
     }
-
-    // 3) Xóa
-    await Listing.findByIdAndDelete(id);
+    await Listing.findByIdAndDelete(listing._id);
     res.status(200).json({ message: 'Listing deleted' });
   } catch (err) {
     console.error('Error deleting listing:', err);
@@ -772,5 +792,27 @@ exports.getListingsByHomeType = async (req, res) => {
       message: 'Internal server error',
       error: err.message,
     });
+  }
+};
+
+// Xóa phòng của user host theo listing_id
+exports.deleteUserListing = async (req, res) => {
+  try {
+    const userData = req.user;
+    const { listingId } = req.params;
+    const listing = await Listing.findOne({ listing_id: Number(listingId) });
+    if (!listing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
+    if (listing.host_id !== userData.user_id) {
+      return res.status(403).json({ message: 'Unauthorized to delete this listing' });
+    }
+    await Listing.findByIdAndDelete(listing._id);
+    // Xóa luôn ảnh liên quan
+    await Image.deleteMany({ listing_id: Number(listingId) });
+    res.status(200).json({ message: 'Listing deleted' });
+  } catch (err) {
+    console.error('Error deleting user listing:', err);
+    res.status(500).json({ message: 'Error deleting user listing', error: err.message });
   }
 };

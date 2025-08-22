@@ -19,25 +19,24 @@ const PlacesFormPage = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    currency: 'VND',
     nightly_price: '',
     person_capacity: 1,
     room_type: '',
-    latitude: '',
-    longitude: '',
     city: '',
+    address: '',
   });
+
+  // State cho danh sách thành phố
+  const [cities, setCities] = useState([]);
 
   const {
     title,
     description,
-    currency,
     nightly_price,
     person_capacity,
     room_type,
-    latitude,
-    longitude,
     city,
+    address,
   } = formData;
 
   const isValidPlaceData = () => {
@@ -47,9 +46,6 @@ const PlacesFormPage = () => {
     } else if (description.trim() === '') {
       toast.error("Description can't be empty!");
       return false;
-    } else if (!currency) {
-      toast.error('Currency is required!');
-      return false;
     } else if (!nightly_price || isNaN(nightly_price)) {
       toast.error('Nightly price must be a number!');
       return false;
@@ -58,12 +54,6 @@ const PlacesFormPage = () => {
       return false;
     } else if (!room_type) {
       toast.error('Room type is required!');
-      return false;
-    } else if (!latitude || isNaN(latitude)) {
-      toast.error('Latitude must be a number!');
-      return false;
-    } else if (!longitude || isNaN(longitude)) {
-      toast.error('Longitude must be a number!');
       return false;
     } else if (!city) {
       toast.error('City is required!');
@@ -78,6 +68,10 @@ const PlacesFormPage = () => {
   };
 
   useEffect(() => {
+    // Lấy danh sách thành phố từ API
+    axiosInstance.get('/cities').then((res) => {
+      setCities(res.data);
+    });
     if (!id) return;
     setLoading(true);
     axiosInstance.get(`/listings/${id}`).then((response) => {
@@ -89,8 +83,6 @@ const PlacesFormPage = () => {
         nightly_price: listing.nightly_price || '',
         person_capacity: listing.person_capacity || 1,
         room_type: listing.room_type || '',
-        latitude: listing.latitude || '',
-        longitude: listing.longitude || '',
         city: listing.city || '',
       });
       setLoading(false);
@@ -116,9 +108,13 @@ const PlacesFormPage = () => {
           await axiosInstance.put('/listings/update', {
             id,
             ...formData,
+            photos: addedPhotos
           });
         } else {
-          await axiosInstance.post('/listings/add', formData);
+          await axiosInstance.post('/listings/add', {
+            ...formData,
+            photos: addedPhotos
+          });
         }
         toast.success('Lưu phòng thành công!');
         setRedirect(true);
@@ -149,8 +145,6 @@ const PlacesFormPage = () => {
       nightly_price: 651983,
       person_capacity: 2,
       room_type: 'Private room',
-      latitude: 10.7869982,
-      longitude: 106.6787041,
       city: 'Ho Chi Minh City',
     });
     toast.info('Đã điền dữ liệu mẫu!');
@@ -183,13 +177,13 @@ const PlacesFormPage = () => {
           onChange={handleFormData}
         />
 
-        {preInput('Currency', 'Currency for nightly price (VND)')}
+        {preInput('Address', 'Địa chỉ chính xác của phòng')}
         <input
           type="text"
-          name="currency"
-          value={currency}
+          name="address"
+          value={address}
           onChange={handleFormData}
-          placeholder="VND"
+          placeholder="Nhập địa chỉ cụ thể"
         />
 
         {preInput('Nightly Price', 'Price per night')}
@@ -219,32 +213,21 @@ const PlacesFormPage = () => {
           placeholder="e.g. Apartment"
         />
 
-        {preInput('Latitude', 'Latitude of the location')}
-        <input
-          type="number"
-          name="latitude"
-          value={latitude}
-          onChange={handleFormData}
-          placeholder="e.g. 21.0285"
-        />
-
-        {preInput('Longitude', 'Longitude of the location')}
-        <input
-          type="number"
-          name="longitude"
-          value={longitude}
-          onChange={handleFormData}
-          placeholder="e.g. 105.8542"
-        />
-
         {preInput('City', 'City where the room is located')}
-        <input
-          type="text"
+        <select
           name="city"
           value={city}
           onChange={handleFormData}
-          placeholder="e.g. Hanoi"
-        />
+          className="w-full p-2 border rounded"
+        >
+          <option value="">Chọn thành phố</option>
+          {cities.map((c) => (
+            <option key={c._id} value={c.name}>{c.name}</option>
+          ))}
+        </select>
+
+        {preInput('Photos', 'Upload photos for your room')}
+        <PhotosUploader addedPhotos={addedPhotos} setAddedPhotos={setAddedPhotos} />
 
         <button className="mx-auto my-4 flex rounded-full bg-rose-600 hover:bg-rose-700 transition-colors py-3 px-20 text-xl font-semibold text-white">
           Save
