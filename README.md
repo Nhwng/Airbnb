@@ -66,6 +66,25 @@ This project is a full-stack web application developed as a clone of Airbnb usin
    ```
        yarn start
    ```
+
+### Quick Setup Script
+
+You can now run the entire stack (install deps, launch ngrok, start API & client) using:
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+The script will:
+
+- Install backend & frontend dependencies
+- Create `.env` files if missing
+- Start an ngrok tunnel (if `ngrok` installed) and inject `PUBLIC_TUNNEL_URL` & `ZALOPAY_CALLBACK_URL`
+- Start API (port 4000) and Client (port 5173)
+
+Override ports by exporting `PORT_API` / `PORT_CLIENT` before running.
+
 ## Technologies Used
 
 - **MongoDB:** NoSQL database for storing user data, listings.
