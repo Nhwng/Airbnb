@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 import { Home, Calendar, CreditCard, Users, MapPin, Edit, Gavel } from 'lucide-react';
 import AccountNav from '@/components/ui/AccountNav';
@@ -7,7 +8,7 @@ import Spinner from '@/components/ui/Spinner';
 import axiosInstance from '@/utils/axios';
 import { formatVND } from '@/utils';
 
-const ListingCard = ({ listing, onAuctionRequest }) => {
+const ListingCard = ({ listing, onAuctionRequest, onDelete }) => {
   const [showAuctionModal, setShowAuctionModal] = useState(false);
   const [auctionForm, setAuctionForm] = useState({
     check_in_date: '',
@@ -165,7 +166,7 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 mb-6 relative">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center space-x-3">
@@ -223,6 +224,12 @@ const ListingCard = ({ listing, onAuctionRequest }) => {
           </div>
         </div>
         </div>
+        <button
+          onClick={() => onDelete(listing.listing_id)}
+          className="absolute bottom-4 right-4 px-4 py-2 bg-red-600 text-white rounded-full shadow hover:bg-red-700 transition-colors"
+        >
+          Delete
+        </button>
       </div>
       
       {/* Auction Registration Modal */}
@@ -440,6 +447,18 @@ const ListingsPage = () => {
     return <Spinner />;
   }
 
+  // Delete room
+  const handleDelete = async (listingId) => {
+    if (!window.confirm('Bạn có chắc muốn xóa phòng này?')) return;
+    try {
+      await axiosInstance.delete(`/listings/user-listings/${listingId}`);
+      setListings(listings.filter(l => l.listing_id !== listingId));
+      toast.success('Xóa phòng thành công!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Xóa phòng thất bại');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
@@ -471,6 +490,7 @@ const ListingsPage = () => {
                   // Refresh listings or show success message
                   console.log('Auction request submitted for listing:', listing.listing_id);
                 }}
+                onDelete={handleDelete}
               />
             ))}
           </div>
