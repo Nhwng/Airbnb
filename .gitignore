@@ -8,3 +8,4 @@ node_modules
 references 
 **/cookies.txt
 /.claude
+ngrok.log

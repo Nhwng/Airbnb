@@ -10,7 +10,6 @@ set -euo pipefail
 
 API_DIR="api"
 CLIENT_DIR="client"
-NGROK_AUTHTOKEN_ENV_VAR_NAME="NGROK_AUTHTOKEN"
 PORT_API=${PORT_API:-4000}
 PORT_CLIENT=${PORT_CLIENT:-5173}
 
@@ -48,13 +47,15 @@ print_header "Installing dependencies (API)"
 (cd "$API_DIR" && npm install)
 
 print_header "Installing dependencies (Client)"
-(cd "$CLIENT_DIR" && npm install --legacy-peer-deps)
+# Clean install to ensure optional dependencies like @esbuild/linux-x64 are properly installed
+(cd "$CLIENT_DIR" && rm -rf node_modules && npm install --legacy-peer-deps)
 
 # 2. Start ngrok if available
 if command -v ngrok >/dev/null 2>&1; then
   print_header "Starting ngrok tunnel for API port $PORT_API"
-  if [[ -n "${!NGROK_AUTHTOKEN_ENV_VAR_NAME:-}" ]]; then
-    ngrok config add-authtoken "${!NGROK_AUTHTOKEN_ENV_VAR_NAME}" >/dev/null 2>&1 || true
+  if [[ -n "${NGROK_AUTHTOKEN:-}" ]]; then
+    ngrok config add-authtoken "${NGROK_AUTHTOKEN}" >/dev/null 2>&1 || true
+
   fi
   # Run ngrok in background
   ngrok http $PORT_API --log=stdout > ngrok.log 2>&1 &
