@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, CreditCard, Home, Plane } from 'lucide-react';
+import { Calendar, MapPin, Users, CreditCard, Home, Plane, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import AccountNav from '@/components/ui/AccountNav';
 import PlaceImg from '@/components/ui/PlaceImg';
@@ -11,91 +11,63 @@ import { formatVND } from '@/utils';
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
+
+  const fetchBookings = async (page = 1, limit = 10) => {
+    try {
+      console.log('BookingsPage: Starting to fetch reservations...');
+      console.log('BookingsPage: Token in localStorage:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      
+      setLoading(true);
+      
+      // Single optimized API call with pagination and populated data
+      const { data } = await axiosInstance.get(`/reservations?page=${page}&limit=${limit}&include_images=true`);
+      
+      console.log('Fetched optimized reservations:', data);
+      
+      // Transform the already populated data
+      const bookingsWithPlace = data.reservations
+        .filter(booking => booking.listing_id) // Only include bookings with valid listings
+        .map(booking => ({
+          ...booking,
+          place: {
+            listing_id: booking.listing_id.listing_id,
+            title: booking.listing_id.title,
+            city: booking.listing_id.city,
+            address: booking.listing_id.address,
+            nightly_price: booking.listing_id.nightly_price,
+            description: booking.listing_id.description,
+            room_type: booking.listing_id.room_type,
+            person_capacity: booking.listing_id.person_capacity,
+            photos: booking.listing_images || [],
+            images: booking.listing_images || []
+          }
+        }));
+      
+      console.log('Final optimized bookings:', bookingsWithPlace);
+      setBookings(bookingsWithPlace);
+      setPagination(data.pagination || pagination);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching bookings: ', error);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const getBookings = async () => {
-      try {
-        console.log('BookingsPage: Starting to fetch reservations...');
-        console.log('BookingsPage: Token in localStorage:', localStorage.getItem('token') ? 'Present' : 'Missing');
-        
-        const { data } = await axiosInstance.get('/reservations');
-        const reservations = data.reservations;
-        console.log('Fetched reservations:', reservations);
-        
-        // Fetch all listing details and images in parallel
-        const listings = await Promise.all(
-          reservations.map(async (booking) => {
-            try {
-              // Extract listing_id using the same pattern as FavoritesPage
-              const listingId = booking.listing_id?.listing_id || booking.listing_id?._id || booking.listing_id;
-              
-              // Validate that we have a proper numeric listing_id
-              let validListingId = null;
-              if (typeof listingId === 'number' && listingId > 0) {
-                validListingId = listingId;
-              } else if (typeof listingId === 'string' && listingId.trim() !== '' && !isNaN(Number(listingId))) {
-                validListingId = Number(listingId);
-              }
-              
-              if (!validListingId) {
-                console.warn(`Invalid listing_id for booking ${booking._id}:`, listingId);
-                return null;
-              }
-              
-              console.log(`Fetching listing for valid ID: ${validListingId}`);
-              const res = await axiosInstance.get(`/listings/${validListingId}`);
-              const listing = res.data;
-              
-              // Try to fetch images for each listing
-              let images = [];
-              try {
-                const imageRes = await axiosInstance.get(`/images/${validListingId}`);
-                console.log(`Images for listing ${validListingId}:`, imageRes.data);
-                images = Array.isArray(imageRes.data) 
-                  ? imageRes.data.map(img => img.url || img)
-                  : [];
-              } catch (imgErr) {
-                console.log(`Failed to fetch images for listing ${validListingId}:`, imgErr.response?.status);
-                // Try alternative endpoints
-                try {
-                  const altRes = await axiosInstance.get(`/listings/${validListingId}/images`);
-                  images = altRes.data.images || altRes.data || [];
-                } catch (altErr) {
-                  console.log('Alternative image endpoint also failed');
-                  images = listing.photos || listing.images || [];
-                }
-              }
-              
-              return {
-                ...listing,
-                photos: images,
-                images: images
-              };
-            } catch (e) {
-              console.error(`Error fetching listing ${booking.listing_id}:`, e);
-              return null;
-            }
-          })
-        );
-        
-        // Gắn thông tin phòng vào từng booking, only include bookings with valid listings
-        const bookingsWithPlace = reservations
-          .map((booking, idx) => ({
-            ...booking,
-            place: listings[idx],
-          }))
-          .filter(booking => booking.place !== null);
-        
-        console.log('Final bookings with place data:', bookingsWithPlace);
-        setBookings(bookingsWithPlace);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching bookings: ', error);
-        setLoading(false);
-      }
-    };
-    getBookings();
+    fetchBookings();
   }, []);
+
+  const handlePageChange = (newPage) => {
+    fetchBookings(newPage, pagination.limit);
+  };
 
   if (loading) return <Spinner />;
 
@@ -273,6 +245,63 @@ const BookingsPage = () => {
               <Home className="w-4 h-4" />
               <span>Start Searching</span>
             </Link>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex justify-center items-center space-x-4">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                pagination.hasPrevPage
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                const isActive = pageNum === pagination.currentPage;
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                      isActive
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                pagination.hasNextPage
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.currentPage - 1) * pagination.limit) + 1}-
+              {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} bookings
+            </div>
           </div>
         )}
       </div>
