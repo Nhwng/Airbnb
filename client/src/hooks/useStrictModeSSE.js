@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import axios from 'axios';
 import axiosInstance from '@/utils/axios';
 
 // Global connection manager to persist across React re-mounts
@@ -62,16 +63,40 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       // Test authentication first with a regular axios call to a protected endpoint
       console.log('SSE: Testing authentication with regular API call...');
       
-      // Test with a known protected endpoint first
-      axiosInstance.get('/reservations')
+      // Get token by making a dummy authenticated request and extracting it
+      let extractedToken = null;
+      
+      // Create a custom axios instance to intercept the request and extract the token
+      const tokenExtractorInstance = axios.create({
+        baseURL: axiosInstance.defaults.baseURL,
+        withCredentials: true,
+      });
+      
+      // Add request interceptor to capture token from cookies before the request
+      tokenExtractorInstance.interceptors.request.use(
+        (config) => {
+          // Try to get token from document cookies
+          const cookies = document.cookie.split(';');
+          for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'token') {
+              extractedToken = decodeURIComponent(value);
+              console.log('SSE: Token intercepted from request cookies:', !!extractedToken);
+              break;
+            }
+          }
+          return config;
+        }
+      );
+      
+      // Test with a known protected endpoint to trigger token extraction
+      tokenExtractorInstance.get('/reservations')
         .then(response => {
-          console.log('SSE: Reservations API authentication test PASSED:', response.status);
-          console.log('SSE: Auth working - user is logged in');
+          console.log('SSE: Authentication test PASSED:', response.status);
+          console.log('SSE: Token extraction successful:', !!extractedToken);
         })
         .catch(error => {
-          console.error('SSE: API authentication test FAILED:', error.response?.status, error.response?.data);
-          console.error('SSE: Error details:', error.message);
-          console.error('SSE: This means cookies are not working properly');
+          console.error('SSE: Authentication test FAILED:', error.response?.status);
         });
       
       // Try to get token from cookies for URL-based auth
@@ -92,9 +117,13 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       console.log('SSE: Found token in cookies:', !!token);
       console.log('SSE: Token length:', token?.length || 0);
       
+      // Use extracted token if available, fallback to cookie token
+      const finalToken = extractedToken || token;
+      console.log('SSE: Using token (extracted vs cookie):', !!extractedToken, 'vs', !!token);
+      
       // Add token as URL parameter if available
-      const finalSseUrl = token ? `${sseUrl}?token=${encodeURIComponent(token)}` : sseUrl;
-      console.log('SSE: Final URL with auth:', finalSseUrl);
+      const finalSseUrl = finalToken ? `${sseUrl}?token=${encodeURIComponent(finalToken)}` : sseUrl;
+      console.log('SSE: Final URL with auth:', finalSseUrl.replace(/token=[^&]+/, 'token=[REDACTED]'));
       
       const eventSource = new EventSource(finalSseUrl, {
         withCredentials: true,
