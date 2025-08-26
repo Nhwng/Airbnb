@@ -2,9 +2,6 @@
 
 echo "🚀 Starting Airbnb Full-Stack Application"
 
-# Set environment variables
-export VITE_BASE_URL="http://54.196.197.172:4000/"
-
 # Function to handle cleanup
 cleanup() {
     echo "🛑 Shutting down services..."
