@@ -29,8 +29,8 @@ app.use(
     name: "session",
     maxAge: process.env.COOKIE_TIME * 24 * 60 * 60 * 1000,
     keys: [process.env.SESSION_SECRET],
-    secure: true, // Only send over HTTPS
-    sameSite: "none", // Allow cross-origin requests
+    secure: process.env.NODE_ENV === 'production' && process.env.HTTPS_ENABLED === 'true', // Only use secure in production with HTTPS
+    sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // Use lax for development
     httpOnly: true, // Makes the cookie accessible only on the server-side
   })
 );

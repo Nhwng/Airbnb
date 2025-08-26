@@ -56,6 +56,9 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:4000';
       const sseUrl = `${baseURL}/auctions/${auctionId}/events`;
       
+      console.log('SSE: Attempting connection to:', sseUrl);
+      console.log('SSE: Using base URL:', baseURL);
+      
       const eventSource = new EventSource(sseUrl, {
         withCredentials: true,
       });
@@ -94,10 +97,20 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       };
 
       eventSource.onerror = (event) => {
-        console.error('SSE: Connection error for auction', auctionId);
+        console.error('SSE: Connection error for auction', auctionId, event);
+        console.error('SSE: EventSource readyState:', eventSource.readyState);
+        console.error('SSE: Connection URL was:', sseUrl);
+        
+        let errorMessage = 'Connection failed';
+        if (eventSource.readyState === EventSource.CLOSED) {
+          errorMessage = 'Connection closed - possibly authentication issue';
+        } else if (eventSource.readyState === EventSource.CONNECTING) {
+          errorMessage = 'Connection failed during handshake';
+        }
+        
         connection.subscribers.forEach(subscriber => {
           subscriber.updateStatus('error');
-          subscriber.updateError('Connection failed');
+          subscriber.updateError(errorMessage);
         });
       };
 

@@ -2,6 +2,8 @@
 
 echo "🚀 Starting Airbnb Full-Stack Application"
 
+export VITE_BASE_URL=http://youcandoit.space:4000
+echo "📝 Environment: VITE_BASE_URL=$VITE_BASE_URL"
 # Function to handle cleanup
 cleanup() {
     echo "🛑 Shutting down services..."
