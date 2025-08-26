@@ -127,20 +127,23 @@ COOKIE_TIME=7
 SESSION_SECRET=your_session_secret
 
 # File Upload
-CLOUDINARY_NAME=your_cloudinary_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+CLOUDINARY_CLOUD_NAME=dogtmpwfq
+CLOUDINARY_API_KEY=719723488987691
+CLOUDINARY_API_SECRET=0BafkDxf57j2OCdopyouCNX1HW4
 
 # Payment Gateway
 ZALOPAY_APP_ID=2554
-ZALOPAY_KEY1=your_zalopay_key1
-ZALOPAY_KEY2=your_zalopay_key2
+ZALOPAY_KEY1=sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn
+ZALOPAY_KEY2=sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn
 ZALOPAY_ENDPOINT=https://sb-openapi.zalopay.vn/v2/create
-ZALOPAY_CALLBACK_URL=http://localhost:4000/payments/zalopay/callback
+ZALOPAY_CALLBACK_URL=http://your_ngrok_url/payments/zalopay/callback
 
 # Ngrok Configuration (Optional)
-PUBLIC_TUNNEL_URL=your_ngrok_url
+PUBLIC_TUNNEL_URL=30YUFtUWjlosKKGtreUtPf57CD2_5gpHWnWQsqmTno7Rpfwkc
 ```
+# Email Configuration
+EMAIL_USER=phamngocphu17012004@gmail.com
+EMAIL_PASS=iqul vpkf btwz kyrw
 
 #### Start Development Servers
 
