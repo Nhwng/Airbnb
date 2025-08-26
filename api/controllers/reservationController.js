@@ -74,6 +74,12 @@ exports.createReservation = async (req, res) => {
 exports.getReservations = async (req, res) => {
   try {
     const { user_id, role } = req.user;
+    
+    // Extract pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const query = {};
 
     // Nếu không phải admin thì chỉ lấy của user đó
@@ -81,20 +87,26 @@ exports.getReservations = async (req, res) => {
       query.user_id = user_id;
     }
 
-    // Bắt đầu build query
+    // Get total count for pagination
+    const totalCount = await Reservation.countDocuments(query);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // Bắt đầu build query with pagination
     let q = Reservation.find(query)
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
 
     if (role === 'admin') {
       // Admin: populate thêm title của listing và name của user
       q = q
         .populate({
-          path: 'listing_id',          // tên field trong Reservation
-          model: 'Listing',            // model đích
-          localField: 'listing_id',    // field trong Reservation
-          foreignField: 'listing_id',  // field trong Listing
+          path: 'listing_id',          
+          model: 'Listing',            
+          localField: 'listing_id',    
+          foreignField: 'listing_id',  
           justOne: true,
-          select: 'title'
+          select: 'title city address nightly_price description'
         })
         .populate({
           path: 'user_id',
@@ -105,14 +117,61 @@ exports.getReservations = async (req, res) => {
           select: 'first_name last_name'
         });
     } else {
-      // User thường: chỉ cần các trường cơ bản
-      q = q.select(
-        'listing_id check_in check_out num_of_guests total_price status created_at'
-      );
+      // User thường: populate listing data để tránh N+1 queries
+      q = q
+        .populate({
+          path: 'listing_id',
+          model: 'Listing',
+          localField: 'listing_id',
+          foreignField: 'listing_id',
+          justOne: true,
+          select: 'listing_id title city address nightly_price description room_type person_capacity'
+        })
+        .select('listing_id check_in check_out num_of_guests total_price status created_at');
     }
 
     const reservations = await q.exec();
-    return res.status(200).json({ reservations });
+
+    // If user wants listing images, fetch them in a single batch query
+    const includeImages = req.query.include_images === 'true';
+    let reservationsWithImages = reservations;
+
+    if (includeImages && reservations.length > 0) {
+      const Image = require('../models/Image');
+      const listingIds = [...new Set(reservations
+        .map(r => r.listing_id?.listing_id)
+        .filter(Boolean))];
+      
+      // Single batch query for all images
+      const images = await Image.find({ 
+        listing_id: { $in: listingIds } 
+      }).select('listing_id url');
+      
+      // Group images by listing_id
+      const imagesByListing = images.reduce((acc, img) => {
+        if (!acc[img.listing_id]) acc[img.listing_id] = [];
+        acc[img.listing_id].push(img.url);
+        return acc;
+      }, {});
+      
+      // Add images to reservations
+      reservationsWithImages = reservations.map(reservation => ({
+        ...reservation.toObject(),
+        listing_images: imagesByListing[reservation.listing_id?.listing_id] || []
+      }));
+    }
+
+    return res.status(200).json({ 
+      reservations: reservationsWithImages,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit
+      }
+    });
   } catch (err) {
     console.error('Error fetching reservations:', err);
     return res.status(500).json({

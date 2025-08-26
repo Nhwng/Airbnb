@@ -40,14 +40,59 @@ const ListingPage = () => {
     if (!id) return;
     const fetchImages = async () => {
       try {
-        const { data } = await axiosInstance.get(`/images/${id}`);
-        setImages(data.map((img) => img.url));
+        // Try different possible image endpoints
+        let imageData;
+        
+        try {
+          // First try: /images endpoint
+          const { data } = await axiosInstance.get(`/images/${id}`);
+          console.log('Images from /images endpoint:', data);
+          imageData = data;
+        } catch (err) {
+          console.log('Failed to fetch from /images endpoint:', err.response?.status);
+          try {
+            // Second try: /listings endpoint with images
+            const { data } = await axiosInstance.get(`/listings/${id}/images`);
+            console.log('Images from /listings/images endpoint:', data);
+            imageData = data.images || data;
+          } catch (err2) {
+            console.log('Failed to fetch from /listings/images endpoint:', err2.response?.status);
+            // Third try: use images from listing data itself
+            console.log('Trying to use images from listing data:', {
+              photos: listing?.photos,
+              images: listing?.images
+            });
+            if (listing?.photos) {
+              imageData = listing.photos;
+            } else if (listing?.images) {
+              imageData = listing.images;
+            } else {
+              imageData = [];
+            }
+          }
+        }
+        
+        // Process the image data into URLs
+        console.log('Processing image data:', imageData);
+        if (Array.isArray(imageData)) {
+          const imageUrls = imageData.map((img) => {
+            if (typeof img === 'string') return img;
+            if (img?.url) return img.url;
+            return null;
+          }).filter(Boolean);
+          console.log('Processed image URLs:', imageUrls);
+          setImages(imageUrls);
+        } else {
+          console.log('Image data is not an array:', typeof imageData);
+          setImages([]);
+        }
       } catch (e) {
+        console.error('Error fetching images:', e);
         setImages([]);
       }
     };
     fetchImages();
-  }, [id]);
+  }, [id, listing]);
 
   useEffect(() => {
     if (!id) return;

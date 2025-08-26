@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, CreditCard, Home, Plane } from 'lucide-react';
+import { Calendar, MapPin, Users, CreditCard, Home, Plane, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import AccountNav from '@/components/ui/AccountNav';
 import PlaceImg from '@/components/ui/PlaceImg';
@@ -11,37 +11,63 @@ import { formatVND } from '@/utils';
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
+
+  const fetchBookings = async (page = 1, limit = 10) => {
+    try {
+      console.log('BookingsPage: Starting to fetch reservations...');
+      console.log('BookingsPage: Token in localStorage:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      
+      setLoading(true);
+      
+      // Single optimized API call with pagination and populated data
+      const { data } = await axiosInstance.get(`/reservations?page=${page}&limit=${limit}&include_images=true`);
+      
+      console.log('Fetched optimized reservations:', data);
+      
+      // Transform the already populated data
+      const bookingsWithPlace = data.reservations
+        .filter(booking => booking.listing_id) // Only include bookings with valid listings
+        .map(booking => ({
+          ...booking,
+          place: {
+            listing_id: booking.listing_id.listing_id,
+            title: booking.listing_id.title,
+            city: booking.listing_id.city,
+            address: booking.listing_id.address,
+            nightly_price: booking.listing_id.nightly_price,
+            description: booking.listing_id.description,
+            room_type: booking.listing_id.room_type,
+            person_capacity: booking.listing_id.person_capacity,
+            photos: booking.listing_images || [],
+            images: booking.listing_images || []
+          }
+        }));
+      
+      console.log('Final optimized bookings:', bookingsWithPlace);
+      setBookings(bookingsWithPlace);
+      setPagination(data.pagination || pagination);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching bookings: ', error);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const getBookings = async () => {
-      try {
-        const { data } = await axiosInstance.get('/reservations');
-        const reservations = data.reservations;
-        // Fetch all listing details in parallel
-        const listings = await Promise.all(
-          reservations.map(async (booking) => {
-            try {
-              const res = await axiosInstance.get(`/listings/${booking.listing_id}`);
-              return res.data;
-            } catch (e) {
-              return null;
-            }
-          })
-        );
-        // Gắn thông tin phòng vào từng booking
-        const bookingsWithPlace = reservations.map((booking, idx) => ({
-          ...booking,
-          place: listings[idx],
-        }));
-        setBookings(bookingsWithPlace);
-        setLoading(false);
-      } catch (error) {
-        console.log('Error: ', error);
-        setLoading(false);
-      }
-    };
-    getBookings();
+    fetchBookings();
   }, []);
+
+  const handlePageChange = (newPage) => {
+    fetchBookings(newPage, pagination.limit);
+  };
 
   if (loading) return <Spinner />;
 
@@ -64,9 +90,11 @@ const BookingsPage = () => {
             {bookings.map((booking) => {
               const checkInDate = new Date(booking.check_in);
               const checkOutDate = new Date(booking.check_out);
+              const currentDate = new Date();
               const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-              const isUpcoming = checkInDate > new Date();
-              const isPast = checkOutDate < new Date();
+              const isUpcoming = checkInDate > currentDate;
+              const isPast = checkOutDate < currentDate;
+              const isCurrent = !isUpcoming && !isPast;
               
               return (
                 <div
@@ -75,26 +103,54 @@ const BookingsPage = () => {
                 >
                   {/* Property Image */}
                   <div className="relative h-48 overflow-hidden">
-                    {booking?.place?.photos?.length > 0 ? (
-                      <PlaceImg 
-                        place={booking.place} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    {booking?.place && (booking?.place?.photos?.length > 0 || booking?.place?.images?.length > 0) ? (
+                      <img 
+                        src={
+                          booking.place.photos?.[0] || 
+                          booking.place.images?.[0]?.url || 
+                          booking.place.images?.[0] ||
+                          '/placeholder-property.jpg'
+                        } 
+                        alt={booking.place.title || 'Property image'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          console.log('Image failed to load:', e.target.src);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Home className="w-12 h-12 text-gray-400" />
+                    ) : null}
+                    {/* Fallback placeholder - always rendered but hidden by default */}
+                    <div 
+                      className="w-full h-full bg-gray-200 flex items-center justify-center absolute inset-0"
+                      style={{
+                        display: (booking?.place?.photos?.length > 0 || booking?.place?.images?.length > 0) ? 'none' : 'flex'
+                      }}
+                    >
+                      <div className="text-center">
+                        <Home className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">No image available</p>
                       </div>
-                    )}
+                    </div>
                     
                     {/* Status Badge */}
                     <div className="absolute top-3 left-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
                         isUpcoming 
                           ? 'bg-blue-100 text-blue-800 border border-blue-200'
                           : isPast 
                           ? 'bg-gray-100 text-gray-700 border border-gray-200'
                           : 'bg-green-100 text-green-800 border border-green-200'
                       }`}>
+                        {isUpcoming && (
+                          <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        )}
+                        {isCurrent && (
+                          <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        )}
+                        {isPast && (
+                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        )}
                         {isUpcoming ? 'Upcoming' : isPast ? 'Past' : 'Current'}
                       </span>
                     </div>
@@ -156,7 +212,7 @@ const BookingsPage = () => {
                     <div className="pt-3 border-t border-gray-100">
                       {booking?.place ? (
                         <Link
-                          to={`/listing/${booking.place._id}`}
+                          to={`/listing/${booking.place.listing_id || booking.place._id || booking.listing_id}`}
                           className="text-rose-600 hover:text-rose-700 text-sm font-medium flex items-center"
                         >
                           View Property
@@ -189,6 +245,63 @@ const BookingsPage = () => {
               <Home className="w-4 h-4" />
               <span>Start Searching</span>
             </Link>
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex justify-center items-center space-x-4">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                pagination.hasPrevPage
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                const isActive = pageNum === pagination.currentPage;
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                      isActive
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                pagination.hasNextPage
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.currentPage - 1) * pagination.limit) + 1}-
+              {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} bookings
+            </div>
           </div>
         )}
       </div>

@@ -27,12 +27,23 @@ const FavoritesPage = () => {
         const favoritesWithImages = await Promise.all(
           data.favorites.map(async (favorite) => {
             try {
-              const imageRes = await axiosInstance.get(`/images/${favorite.listing_id.listing_id}`);
+              // Try different possible image endpoints
+              let imageRes;
+              const listingId = favorite.listing_id.listing_id || favorite.listing_id._id || favorite.listing_id;
+              
+              try {
+                imageRes = await axiosInstance.get(`/images/${listingId}`);
+              } catch (err) {
+                // Try alternative endpoint if first fails
+                imageRes = await axiosInstance.get(`/listings/${listingId}/images`);
+              }
+              
               return {
                 ...favorite,
-                images: imageRes.data || []
+                images: imageRes.data || imageRes.data.images || []
               };
             } catch (err) {
+              console.log('Error fetching images for listing:', favorite.listing_id, err);
               return {
                 ...favorite,
                 images: []
@@ -162,7 +173,11 @@ const FavoritesPage = () => {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {favorites.map((favorite) => {
               const listing = favorite.listing_id;
-              const firstImage = favorite.images?.length > 0 ? favorite.images[0] : null;
+              const firstImage = favorite.images?.length > 0 
+                ? favorite.images[0] 
+                : listing.photos?.length > 0 
+                ? listing.photos[0] 
+                : null;
               
               return (
                 <div
@@ -173,15 +188,36 @@ const FavoritesPage = () => {
                   <div className="relative h-48 overflow-hidden">
                     {firstImage ? (
                       <img 
-                        src={firstImage.url} 
+                        src={firstImage.url || firstImage} 
                         alt={listing.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          console.log('Favorite image failed to load:', e.target.src);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Home className="w-12 h-12 text-gray-400" />
+                    ) : null}
+                    {/* Fallback placeholder - always rendered but hidden by default */}
+                    <div 
+                      className="w-full h-full bg-gray-200 flex items-center justify-center absolute inset-0"
+                      style={{
+                        display: firstImage ? 'none' : 'flex'
+                      }}
+                    >
+                      <div className="text-center">
+                        <Home className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">No image available</p>
                       </div>
-                    )}
+                    </div>
+                    
+                    {/* Favorite Status Badge */}
+                    <div className="absolute top-3 left-3">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-200">
+                        <div className="w-2 h-2 bg-rose-600 rounded-full"></div>
+                        Favorite
+                      </span>
+                    </div>
                     
                     {/* Remove from favorites button */}
                     <button

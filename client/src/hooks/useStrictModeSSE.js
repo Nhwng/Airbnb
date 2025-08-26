@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import axios from 'axios';
 import axiosInstance from '@/utils/axios';
 
 // Global connection manager to persist across React re-mounts
@@ -56,7 +57,75 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:4000';
       const sseUrl = `${baseURL}/auctions/${auctionId}/events`;
       
-      const eventSource = new EventSource(sseUrl, {
+      console.log('SSE: Attempting connection to:', sseUrl);
+      console.log('SSE: Using base URL:', baseURL);
+      
+      // Test authentication first with a regular axios call to a protected endpoint
+      console.log('SSE: Testing authentication with regular API call...');
+      
+      // Get token by making a dummy authenticated request and extracting it
+      let extractedToken = null;
+      
+      // Create a custom axios instance to intercept the request and extract the token
+      const tokenExtractorInstance = axios.create({
+        baseURL: axiosInstance.defaults.baseURL,
+        withCredentials: true,
+      });
+      
+      // Add request interceptor to capture token from cookies before the request
+      tokenExtractorInstance.interceptors.request.use(
+        (config) => {
+          // Try to get token from document cookies
+          const cookies = document.cookie.split(';');
+          for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'token') {
+              extractedToken = decodeURIComponent(value);
+              console.log('SSE: Token intercepted from request cookies:', !!extractedToken);
+              break;
+            }
+          }
+          return config;
+        }
+      );
+      
+      // Test with a known protected endpoint to trigger token extraction
+      tokenExtractorInstance.get('/reservations')
+        .then(response => {
+          console.log('SSE: Authentication test PASSED:', response.status);
+          console.log('SSE: Token extraction successful:', !!extractedToken);
+        })
+        .catch(error => {
+          console.error('SSE: Authentication test FAILED:', error.response?.status);
+        });
+      
+      // Try to get token from cookies for URL-based auth
+      const getTokenFromCookie = () => {
+        console.log('SSE: All cookies:', document.cookie);
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          console.log('SSE: Cookie found:', name, '=', value ? '[PRESENT]' : '[EMPTY]');
+          if (name === 'token') {
+            return decodeURIComponent(value);
+          }
+        }
+        return null;
+      };
+      
+      const token = getTokenFromCookie();
+      console.log('SSE: Found token in cookies:', !!token);
+      console.log('SSE: Token length:', token?.length || 0);
+      
+      // Use extracted token if available, fallback to cookie token
+      const finalToken = extractedToken || token;
+      console.log('SSE: Using token (extracted vs cookie):', !!extractedToken, 'vs', !!token);
+      
+      // Add token as URL parameter if available
+      const finalSseUrl = finalToken ? `${sseUrl}?token=${encodeURIComponent(finalToken)}` : sseUrl;
+      console.log('SSE: Final URL with auth:', finalSseUrl.replace(/token=[^&]+/, 'token=[REDACTED]'));
+      
+      const eventSource = new EventSource(finalSseUrl, {
         withCredentials: true,
       });
 
@@ -94,10 +163,20 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       };
 
       eventSource.onerror = (event) => {
-        console.error('SSE: Connection error for auction', auctionId);
+        console.error('SSE: Connection error for auction', auctionId, event);
+        console.error('SSE: EventSource readyState:', eventSource.readyState);
+        console.error('SSE: Connection URL was:', sseUrl);
+        
+        let errorMessage = 'Connection failed';
+        if (eventSource.readyState === EventSource.CLOSED) {
+          errorMessage = 'Connection closed - possibly authentication issue';
+        } else if (eventSource.readyState === EventSource.CONNECTING) {
+          errorMessage = 'Connection failed during handshake';
+        }
+        
         connection.subscribers.forEach(subscriber => {
           subscriber.updateStatus('error');
-          subscriber.updateError('Connection failed');
+          subscriber.updateError(errorMessage);
         });
       };
 

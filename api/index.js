@@ -29,8 +29,8 @@ app.use(
     name: "session",
     maxAge: process.env.COOKIE_TIME * 24 * 60 * 60 * 1000,
     keys: [process.env.SESSION_SECRET],
-    secure: true, // Only send over HTTPS
-    sameSite: "none", // Allow cross-origin requests
+    secure: process.env.NODE_ENV === 'production' && process.env.HTTPS_ENABLED === 'true', // Only use secure in production with HTTPS
+    sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // Use lax for development
     httpOnly: true, // Makes the cookie accessible only on the server-side
   })
 );
@@ -41,10 +41,15 @@ app.use(express.json());
 // CORS - Allow multiple origins for development and production
 const allowedOrigins = [
   'http://localhost:5173',           // Local development
+  'http://localhost:5173/',          // Local development with trailing slash
   'http://localhost:3000',           // Alternative local port
+  'http://localhost:3000/',          // Alternative local port with trailing slash
   'http://youcandoit.space:5173',    // Production domain
+  'http://youcandoit.space:5173/',   // Production domain with trailing slash
   'https://youcandoit.space:5173',   // HTTPS version
+  'https://youcandoit.space:5173/',  // HTTPS version with trailing slash
   'http://54.196.197.172:5173',      // EC2 IP address
+  'http://54.196.197.172:5173/',     // EC2 IP address with trailing slash
 ];
 
 app.use(
@@ -53,7 +58,12 @@ app.use(
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      // Normalize origin by removing trailing slash for comparison
+      const normalizedOrigin = origin.replace(/\/$/, '');
+      const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
+      
+      if (allowedOrigins.indexOf(origin) !== -1 || normalizedAllowed.indexOf(normalizedOrigin) !== -1) {
+        console.log('CORS allowed origin:', origin);
         return callback(null, true);
       } else {
         console.log('CORS blocked origin:', origin);
