@@ -8,7 +8,7 @@ const zalopayConfig = {
     key1: process.env.ZALOPAY_KEY1 || "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
     key2: process.env.ZALOPAY_KEY2 || "trMrHtvjo6myautxDUiAcYsVtaeQ8nhf",
     endpoint: process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create",
-    callback_url: `http://54.196.197.172:4000/payments/zalopay/callback`
+    callback_url: `https://0d9fc3dad105.ngrok-free.app/payments/zalopay/callback`
 };
 
 module.exports = { zalopayConfig };

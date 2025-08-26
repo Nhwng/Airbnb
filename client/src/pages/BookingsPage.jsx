@@ -17,26 +17,57 @@ const BookingsPage = () => {
       try {
         const { data } = await axiosInstance.get('/reservations');
         const reservations = data.reservations;
-        // Fetch all listing details in parallel
+        console.log('Fetched reservations:', reservations);
+        
+        // Fetch all listing details and images in parallel
         const listings = await Promise.all(
           reservations.map(async (booking) => {
             try {
               const res = await axiosInstance.get(`/listings/${booking.listing_id}`);
-              return res.data;
+              const listing = res.data;
+              
+              // Try to fetch images for each listing
+              let images = [];
+              try {
+                const imageRes = await axiosInstance.get(`/images/${booking.listing_id}`);
+                console.log(`Images for listing ${booking.listing_id}:`, imageRes.data);
+                images = Array.isArray(imageRes.data) 
+                  ? imageRes.data.map(img => img.url || img)
+                  : [];
+              } catch (imgErr) {
+                console.log(`Failed to fetch images for listing ${booking.listing_id}:`, imgErr.response?.status);
+                // Try alternative endpoints
+                try {
+                  const altRes = await axiosInstance.get(`/listings/${booking.listing_id}/images`);
+                  images = altRes.data.images || altRes.data || [];
+                } catch (altErr) {
+                  console.log('Alternative image endpoint also failed');
+                  images = listing.photos || listing.images || [];
+                }
+              }
+              
+              return {
+                ...listing,
+                photos: images,
+                images: images
+              };
             } catch (e) {
+              console.error(`Error fetching listing ${booking.listing_id}:`, e);
               return null;
             }
           })
         );
+        
         // Gắn thông tin phòng vào từng booking
         const bookingsWithPlace = reservations.map((booking, idx) => ({
           ...booking,
           place: listings[idx],
         }));
+        console.log('Final bookings with place data:', bookingsWithPlace);
         setBookings(bookingsWithPlace);
         setLoading(false);
       } catch (error) {
-        console.log('Error: ', error);
+        console.error('Error fetching bookings: ', error);
         setLoading(false);
       }
     };
@@ -64,9 +95,11 @@ const BookingsPage = () => {
             {bookings.map((booking) => {
               const checkInDate = new Date(booking.check_in);
               const checkOutDate = new Date(booking.check_out);
+              const currentDate = new Date();
               const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-              const isUpcoming = checkInDate > new Date();
-              const isPast = checkOutDate < new Date();
+              const isUpcoming = checkInDate > currentDate;
+              const isPast = checkOutDate < currentDate;
+              const isCurrent = !isUpcoming && !isPast;
               
               return (
                 <div
@@ -75,26 +108,54 @@ const BookingsPage = () => {
                 >
                   {/* Property Image */}
                   <div className="relative h-48 overflow-hidden">
-                    {booking?.place?.photos?.length > 0 ? (
-                      <PlaceImg 
-                        place={booking.place} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    {booking?.place && (booking?.place?.photos?.length > 0 || booking?.place?.images?.length > 0) ? (
+                      <img 
+                        src={
+                          booking.place.photos?.[0] || 
+                          booking.place.images?.[0]?.url || 
+                          booking.place.images?.[0] ||
+                          '/placeholder-property.jpg'
+                        } 
+                        alt={booking.place.title || 'Property image'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          console.log('Image failed to load:', e.target.src);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Home className="w-12 h-12 text-gray-400" />
+                    ) : null}
+                    {/* Fallback placeholder - always rendered but hidden by default */}
+                    <div 
+                      className="w-full h-full bg-gray-200 flex items-center justify-center absolute inset-0"
+                      style={{
+                        display: (booking?.place?.photos?.length > 0 || booking?.place?.images?.length > 0) ? 'none' : 'flex'
+                      }}
+                    >
+                      <div className="text-center">
+                        <Home className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">No image available</p>
                       </div>
-                    )}
+                    </div>
                     
                     {/* Status Badge */}
                     <div className="absolute top-3 left-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
                         isUpcoming 
                           ? 'bg-blue-100 text-blue-800 border border-blue-200'
                           : isPast 
                           ? 'bg-gray-100 text-gray-700 border border-gray-200'
                           : 'bg-green-100 text-green-800 border border-green-200'
                       }`}>
+                        {isUpcoming && (
+                          <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        )}
+                        {isCurrent && (
+                          <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        )}
+                        {isPast && (
+                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        )}
                         {isUpcoming ? 'Upcoming' : isPast ? 'Past' : 'Current'}
                       </span>
                     </div>
@@ -156,7 +217,7 @@ const BookingsPage = () => {
                     <div className="pt-3 border-t border-gray-100">
                       {booking?.place ? (
                         <Link
-                          to={`/listing/${booking.place._id}`}
+                          to={`/listing/${booking.place.listing_id || booking.place._id || booking.listing_id}`}
                           className="text-rose-600 hover:text-rose-700 text-sm font-medium flex items-center"
                         >
                           View Property
