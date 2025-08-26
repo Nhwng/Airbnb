@@ -27,17 +27,18 @@ create_env_file() {
 # 1. Ensure .env files
 create_env_file "$API_DIR/.env" "PORT=$PORT_API
 CLIENT_URL=http://localhost:$PORT_CLIENT
-COOKIE_TIME=7
-SESSION_SECRET=changeme_session_secret
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_key
-CLOUDINARY_API_SECRET=your_secret
-ZALOPAY_APP_ID=2554
-ZALOPAY_KEY1=sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn
-ZALOPAY_KEY2=trMrHtvjo6myautxDUiAcYsVtaeQ8nhf
-ZALOPAY_ENDPOINT=https://sb-openapi.zalopay.vn/v2/create
-# If using ngrok this will be overridden later
-auth_placeholder=1
+COOKIE_TIME=${COOKIE_TIME:-7}
+SESSION_SECRET=${SESSION_SECRET:-changeme_session_secret}
+JWT_SECRET=${JWT_SECRET:-changeme_jwt_secret}
+JWT_EXPIRES_TIME=${JWT_EXPIRES_TIME:-20d}
+DB_URL=${DB_URL:-mongodb://localhost:27017/airbnb_db}
+CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-your_cloud_name}
+CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-your_key}
+CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-your_secret}
+ZALOPAY_APP_ID=${ZALOPAY_APP_ID:-2554}
+ZALOPAY_KEY1=${ZALOPAY_KEY1:-sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn}
+ZALOPAY_KEY2=${ZALOPAY_KEY2:-trMrHtvjo6myautxDUiAcYsVtaeQ8nhf}
+ZALOPAY_ENDPOINT=${ZALOPAY_ENDPOINT:-https://sb-openapi.zalopay.vn/v2/create}
 "
 
 create_env_file "$CLIENT_DIR/.env" "VITE_API_URL=http://localhost:$PORT_API
@@ -68,8 +69,8 @@ if command -v ngrok >/dev/null 2>&1; then
     fi
     sleep 1
   done
-  # Extract https URL
-  PUBLIC_URL=$(grep -Eo 'url=https://[a-zA-Z0-9.-]+' ngrok.log | head -n1 | cut -d= -f2 || true)
+  # Extract https URL from Forwarding line
+  PUBLIC_URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.ngrok-free\.app' ngrok.log | head -n1 || true)
   if [[ -n "$PUBLIC_URL" ]]; then
     echo "Discovered public tunnel: $PUBLIC_URL"
     # Append / update API .env
