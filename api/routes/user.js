@@ -15,9 +15,12 @@ const {
   verifyEmailPin,
   requestHostRole,
   handleHostRequest,
+  withdrawHostRequest,
 } = require('../controllers/userController');
 // Guest gửi yêu cầu đăng ký làm host
 router.route('/request-host').post(isLoggedIn, requestHostRole);
+// Guest rút lại yêu cầu đăng ký làm host
+router.route('/withdraw-host-request').post(isLoggedIn, withdrawHostRequest);
 // Admin duyệt hoặc từ chối yêu cầu làm host
 router.route('/handle-host-request').post(isAdmin, handleHostRequest);
 

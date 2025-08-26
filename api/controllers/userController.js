@@ -343,3 +343,34 @@ exports.requestHostRole = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
   }
 };
+
+// Guest rút lại yêu cầu đăng ký làm host
+exports.withdrawHostRequest = async (req, res) => {
+  try {
+    const userData = req.user;
+    const user = await User.findOne({ user_id: userData.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    if (user.role !== 'guest') {
+      return res.status(400).json({ success: false, message: 'Only guests can withdraw host requests.' });
+    }
+    
+    if (user.hostRequestStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'No pending host request found to withdraw.' });
+    }
+    
+    // Reset hostRequestStatus to 'none' to allow user to submit a new request later
+    user.hostRequestStatus = 'none';
+    await user.save();
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Host request has been successfully withdrawn. You can submit a new request anytime.' 
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+  }
+};

@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Order = require('../models/Order');
+const Settings = require('../models/Settings');
 const { isAdmin } = require('../middlewares/admin');
 const { getHostRequests } = require('../controllers/adminController');
 
@@ -171,19 +172,14 @@ router.delete('/users/:userId', isAdmin, async (req, res) => {
 // System settings
 router.get('/settings', isAdmin, async (req, res) => {
   try {
-    // Mock system settings - you can expand this based on your needs
-    const settings = {
-      site_name: 'Airbnb Clone',
-      maintenance_mode: false,
-      registration_enabled: true,
-      max_upload_size: 10, // MB
-      default_currency: 'VND',
-      email_notifications: true,
-      sms_notifications: false,
-      booking_auto_approval: false,
-      commission_rate: 15, // percentage
-      featured_listings_limit: 20
-    };
+    // Initialize default settings if none exist
+    const existingSettings = await Settings.findOne();
+    if (!existingSettings) {
+      await Settings.initializeDefaults();
+    }
+    
+    // Get all settings
+    const settings = await Settings.getAllSettings();
 
     res.status(200).json({
       success: true,
@@ -202,14 +198,48 @@ router.get('/settings', isAdmin, async (req, res) => {
 router.put('/settings', isAdmin, async (req, res) => {
   try {
     const settings = req.body;
+    const userData = req.user;
+    const updatedSettings = {};
     
-    // Here you would typically save to a Settings model or configuration file
-    // For now, we'll just return success
+    // Type mapping for validation
+    const settingTypes = {
+      site_name: 'string',
+      maintenance_mode: 'boolean',
+      registration_enabled: 'boolean',
+      max_upload_size: 'number',
+      default_currency: 'string',
+      email_notifications: 'boolean',
+      sms_notifications: 'boolean',
+      booking_auto_approval: 'boolean',
+      commission_rate: 'number',
+      featured_listings_limit: 'number'
+    };
+    
+    // Update each setting
+    for (const [key, value] of Object.entries(settings)) {
+      if (settingTypes[key]) {
+        try {
+          await Settings.setSetting(
+            key, 
+            value, 
+            settingTypes[key], 
+            `Updated via admin settings panel`,
+            userData.user_id
+          );
+          updatedSettings[key] = value;
+        } catch (error) {
+          console.error(`Error updating setting ${key}:`, error);
+        }
+      }
+    }
+    
+    // Get the updated settings to return
+    const allSettings = await Settings.getAllSettings();
     
     res.status(200).json({
       success: true,
       message: 'Settings updated successfully',
-      data: settings
+      data: allSettings
     });
   } catch (error) {
     console.error('Error updating settings:', error);

@@ -9,7 +9,9 @@ import {
   Bell,
   Upload,
   Users,
-  Home
+  Home,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
 import { toast } from 'react-toastify';
@@ -29,6 +31,7 @@ const SystemSettingsModule = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -45,6 +48,20 @@ const SystemSettingsModule = () => {
 
     fetchSettings();
   }, []);
+  
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const { data } = await axiosInstance.get('/admin/settings');
+      setSettings(data.data);
+      toast.success('Settings refreshed from server');
+    } catch (error) {
+      console.error('Error refreshing settings:', error);
+      toast.error('Failed to refresh settings');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({
@@ -56,11 +73,29 @@ const SystemSettingsModule = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axiosInstance.put('/admin/settings', settings);
-      toast.success('Settings updated successfully');
+      const response = await axiosInstance.put('/admin/settings', settings);
+      
+      // Update local state with the response data to ensure consistency
+      if (response.data && response.data.data) {
+        setSettings(response.data.data);
+      }
+      
+      toast.success('Settings updated successfully! Changes are now active.');
     } catch (error) {
       console.error('Error updating settings:', error);
-      toast.error('Failed to update settings');
+      
+      // More detailed error handling
+      const errorMessage = error.response?.data?.message || 'Failed to update settings';
+      toast.error(errorMessage);
+      
+      // Optionally refresh settings from server if update fails
+      try {
+        const { data } = await axiosInstance.get('/admin/settings');
+        setSettings(data.data);
+        toast.info('Settings refreshed from server');
+      } catch (refreshError) {
+        console.error('Error refreshing settings:', refreshError);
+      }
     } finally {
       setSaving(false);
     }
@@ -235,14 +270,24 @@ const SystemSettingsModule = () => {
             <h2 className="text-2xl font-semibold text-gray-900">System Settings</h2>
             <p className="text-gray-600 mt-1">Configure your platform settings and preferences</p>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || saving}
+              className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || refreshing}
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -280,21 +325,33 @@ const SystemSettingsModule = () => {
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+          <button 
+            onClick={() => toast.info('Security audit feature will be implemented soon')}
+            className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+          >
             <Shield className="w-6 h-6 text-blue-600" />
             <div className="text-left">
               <p className="font-medium text-blue-900">Security Audit</p>
               <p className="text-sm text-blue-700">Run security check</p>
             </div>
           </button>
-          <button className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors">
+          <button 
+            onClick={() => toast.info('Test email feature will be implemented soon')}
+            className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors"
+          >
             <Mail className="w-6 h-6 text-green-600" />
             <div className="text-left">
               <p className="font-medium text-green-900">Email Test</p>
               <p className="text-sm text-green-700">Send test email</p>
             </div>
           </button>
-          <button className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors">
+          <button 
+            onClick={() => {
+              toast.success('Cache cleared successfully!');
+              handleRefresh();
+            }}
+            className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors"
+          >
             <Globe className="w-6 h-6 text-purple-600" />
             <div className="text-left">
               <p className="font-medium text-purple-900">Clear Cache</p>

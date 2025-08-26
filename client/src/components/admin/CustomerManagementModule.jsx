@@ -1,23 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, 
-  Filter, 
-  Edit, 
   Trash2, 
-  UserCheck, 
-  UserX, 
   ChevronLeft, 
   ChevronRight,
-  MoreHorizontal,
-  Mail,
   Calendar,
-  Phone,
-  MapPin,
-  Star,
-  Shield,
   Eye,
-  Ban,
-  Users
+  Users,
+  UserCheck
 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
 import Spinner from '@/components/ui/Spinner';
@@ -136,284 +126,212 @@ const CustomerManagementModule = () => {
   if (loading) return <Spinner />;
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Customer Management</h2>
-            <p className="text-gray-600 mt-1">Manage customer accounts, profiles, and access controls</p>
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Customer Management</h2>
+          <p className="text-gray-600 mt-1">Manage customer accounts, profiles, and access controls</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-600">
+            Total: {pagination.total} customers
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              Total: {pagination.total} customers
-            </div>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-              Export Data
+          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+            Export Data
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone..."
+            value={filters.search}
+            onChange={handleSearch}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          {/* Role Filters */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => handleRoleFilter('all')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filters.role === 'all'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => handleRoleFilter('guest')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filters.role === 'guest'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Guests
+            </button>
+            <button
+              onClick={() => handleRoleFilter('host')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filters.role === 'host'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Hosts
             </button>
           </div>
-        </div>
 
-        {/* Search and Filters */}
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              value={filters.search}
-              onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {/* Role Filters */}
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => handleRoleFilter('all')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  filters.role === 'all'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => handleRoleFilter('guest')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  filters.role === 'guest'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Guests
-              </button>
-              <button
-                onClick={() => handleRoleFilter('host')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  filters.role === 'host'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Hosts
-              </button>
-            </div>
-
-            {/* Status Filters */}
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => handleStatusFilter('all')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  filters.status === 'all'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                All Status
-              </button>
-              <button
-                onClick={() => handleStatusFilter('active')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  filters.status === 'active'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => handleStatusFilter('suspended')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  filters.status === 'suspended'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Suspended
-              </button>
-            </div>
+          {/* Status Filters */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => handleStatusFilter('all')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filters.status === 'all'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              All Status
+            </button>
+            <button
+              onClick={() => handleStatusFilter('active')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filters.status === 'active'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => handleStatusFilter('suspended')}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                filters.status === 'suspended'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Suspended
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Customer Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Customers</p>
-              <p className="text-2xl font-bold text-gray-900">{pagination.total}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
+      {/* Customer Statistics - Compact version */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <Users className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-700">Total</span>
           </div>
+          <p className="text-lg font-bold text-gray-900">{pagination.total}</p>
         </div>
         
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Hosts</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {customers.filter(c => c.role === 'host').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <UserCheck className="w-6 h-6 text-green-600" />
-            </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <UserCheck className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-medium text-gray-700">Hosts</span>
           </div>
+          <p className="text-lg font-bold text-gray-900">
+            {customers.filter(c => c.role === 'host').length}
+          </p>
         </div>
         
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Superhosts</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {customers.filter(c => c.is_superhost).length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <Star className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
         
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">New This Month</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {customers.filter(c => {
-                  const created = new Date(c.createdAt);
-                  const now = new Date();
-                  return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-                }).length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-purple-600" />
-            </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <Calendar className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-medium text-gray-700">New</span>
           </div>
+          <p className="text-lg font-bold text-gray-900">
+            {customers.filter(c => {
+              const created = new Date(c.createdAt);
+              const now = new Date();
+              return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+            }).length}
+          </p>
         </div>
       </div>
 
       {/* Customers Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden border border-gray-200 rounded-lg">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+          <table className="min-w-full text-left">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Customer</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Role</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Joined</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Actions</th>
+                <th className="p-2 text-sm font-medium text-gray-900">Customer</th>
+                <th className="p-2 text-sm font-medium text-gray-900">Role</th>
+                <th className="p-2 text-sm font-medium text-gray-900">Status</th>
+                <th className="p-2 text-sm font-medium text-gray-900">Joined</th>
+                <th className="p-2 text-sm font-medium text-gray-900">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody>
               {customers.map((customer) => (
-                <tr key={customer._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                <tr key={customer._id} className="border-b hover:bg-gray-50">
+                  <td className="p-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                         {customer.picture_url ? (
                           <img 
                             src={customer.picture_url} 
                             alt="" 
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (
-                          <span className="text-gray-600 font-medium">
+                          <span className="text-xs font-medium text-gray-600">
                             {customer.first_name?.[0]}{customer.last_name?.[0]}
                           </span>
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-gray-900 text-sm">
                           {customer.first_name} {customer.last_name}
                         </p>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Mail className="w-4 h-4 mr-1" />
-                          {customer.email}
-                        </div>
-                        {customer.phone && (
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Phone className="w-4 h-4 mr-1" />
-                            {customer.phone}
-                          </div>
-                        )}
+                        <p className="text-xs text-gray-600">{customer.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getRoleBadgeColor(customer.role)}`}>
-                        {customer.role}
-                      </span>
-                      {customer.is_superhost && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                          <Star className="w-3 h-3 mr-1" />
-                          Superhost
-                        </span>
-                      )}
-                    </div>
+                  <td className="p-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(customer.role)}`}>
+                      {customer.role}
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusBadgeColor(customer.status || 'active')}`}>
+                  <td className="p-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(customer.status || 'active')}`}>
                       {customer.status || 'active'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="w-4 h-4 mr-1" />
+                  <td className="p-2">
+                    <span className="text-sm text-gray-600">
                       {new Date(customer.createdAt).toLocaleDateString()}
-                    </div>
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
+                  <td className="p-2">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleViewDetails(customer)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="View Details"
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded text-xs"
+                        title="View"
                       >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleUpdateCustomer(customer.user_id, { 
-                          role: customer.role === 'host' ? 'guest' : 'host' 
-                        })}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Toggle Role"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleUpdateCustomer(customer.user_id, { 
-                          is_superhost: !customer.is_superhost 
-                        })}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                        title="Toggle Superhost"
-                      >
-                        {customer.is_superhost ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                      </button>
-                      <button
-                        onClick={() => handleUpdateCustomer(customer.user_id, { 
-                          status: customer.status === 'suspended' ? 'active' : 'suspended' 
-                        })}
-                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Toggle Status"
-                      >
-                        <Ban className="w-4 h-4" />
+                        <Eye className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => handleDeleteCustomer(customer.user_id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete Customer"
+                        className="p-1 text-red-600 hover:bg-red-50 rounded text-xs"
+                        title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   </td>
@@ -425,24 +343,24 @@ const CustomerManagementModule = () => {
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div className="px-3 py-2 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-xs text-gray-600">
               Page {pagination.current} of {pagination.pages}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => handlePageChange(pagination.current - 1)}
                 disabled={pagination.current === 1}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3 h-3" />
               </button>
               <button
                 onClick={() => handlePageChange(pagination.current + 1)}
                 disabled={pagination.current === pagination.pages}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -499,12 +417,6 @@ const CustomerManagementModule = () => {
                   <label className="text-sm font-medium text-gray-700">Joined Date</label>
                   <p className="mt-1 text-gray-900">
                     {new Date(selectedCustomer.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Superhost</label>
-                  <p className="mt-1 text-gray-900">
-                    {selectedCustomer.is_superhost ? 'Yes' : 'No'}
                   </p>
                 </div>
               </div>

@@ -13,7 +13,7 @@ const MapLocation = ({ latitude, longitude, title, className = "" }) => {
     );
   }
 
-  const mapSrc = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dO_7RUIrpFKx9c&q=${latitude},${longitude}&zoom=15`;
+  const mapSrc = `https://www.google.com/maps?q=${latitude},${longitude}&hl=vi&z=15&output=embed`;
   
   return (
     <div className={`relative ${className}`}>

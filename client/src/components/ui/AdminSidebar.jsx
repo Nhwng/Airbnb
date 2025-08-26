@@ -41,8 +41,8 @@ const AdminSidebar = ({ activeModule, setActiveModule }) => {
     },
     {
       id: 'hostRequests',
-      label: 'Host Requests',
-      description: 'Duyệt yêu cầu làm host',
+      label: 'Host Management',
+      description: 'Host Requests',
       icon: Users,
       color: 'text-rose-600',
       bgColor: 'bg-rose-50',
