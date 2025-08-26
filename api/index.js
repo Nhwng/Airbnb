@@ -38,10 +38,28 @@ app.use(
 // middleware to handle json
 app.use(express.json());
 
-// CORS
+// CORS - Allow multiple origins for development and production
+const allowedOrigins = [
+  'http://localhost:5173',           // Local development
+  'http://localhost:3000',           // Alternative local port
+  'http://youcandoit.space:5173',    // Production domain
+  'https://youcandoit.space:5173',   // HTTPS version
+  'http://54.196.197.172:5173',      // EC2 IP address
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
