@@ -59,7 +59,44 @@ export const useStrictModeSSE = (auctionId, onUpdate = null) => {
       console.log('SSE: Attempting connection to:', sseUrl);
       console.log('SSE: Using base URL:', baseURL);
       
-      const eventSource = new EventSource(sseUrl, {
+      // Test authentication first with a regular axios call to a protected endpoint
+      console.log('SSE: Testing authentication with regular API call...');
+      
+      // Test with a known protected endpoint first
+      axiosInstance.get('/reservations')
+        .then(response => {
+          console.log('SSE: Reservations API authentication test PASSED:', response.status);
+          console.log('SSE: Auth working - user is logged in');
+        })
+        .catch(error => {
+          console.error('SSE: API authentication test FAILED:', error.response?.status, error.response?.data);
+          console.error('SSE: Error details:', error.message);
+          console.error('SSE: This means cookies are not working properly');
+        });
+      
+      // Try to get token from cookies for URL-based auth
+      const getTokenFromCookie = () => {
+        console.log('SSE: All cookies:', document.cookie);
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          console.log('SSE: Cookie found:', name, '=', value ? '[PRESENT]' : '[EMPTY]');
+          if (name === 'token') {
+            return decodeURIComponent(value);
+          }
+        }
+        return null;
+      };
+      
+      const token = getTokenFromCookie();
+      console.log('SSE: Found token in cookies:', !!token);
+      console.log('SSE: Token length:', token?.length || 0);
+      
+      // Add token as URL parameter if available
+      const finalSseUrl = token ? `${sseUrl}?token=${encodeURIComponent(token)}` : sseUrl;
+      console.log('SSE: Final URL with auth:', finalSseUrl);
+      
+      const eventSource = new EventSource(finalSseUrl, {
         withCredentials: true,
       });
 

@@ -2,9 +2,15 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 exports.isLoggedIn = async (req, res, next) => {
-  const token = req.cookies.token || (req.header('Authorization') && req.header('Authorization').replace('Bearer ', ''));
+  const token = req.cookies.token || 
+                (req.header('Authorization') && req.header('Authorization').replace('Bearer ', '')) ||
+                req.query.token; // Support token in URL query parameters for SSE
 
   if (!token) {
+    console.log('Authentication failed - no token found in cookies, headers, or query params');
+    console.log('Cookies:', req.cookies);
+    console.log('Authorization header:', req.header('Authorization'));
+    console.log('Query token:', req.query.token);
     return res.status(401).json({
       success: false,
       message: 'Login first to access this page',
