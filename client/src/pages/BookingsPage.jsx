@@ -15,6 +15,9 @@ const BookingsPage = () => {
   useEffect(() => {
     const getBookings = async () => {
       try {
+        console.log('BookingsPage: Starting to fetch reservations...');
+        console.log('BookingsPage: Token in localStorage:', localStorage.getItem('token') ? 'Present' : 'Missing');
+        
         const { data } = await axiosInstance.get('/reservations');
         const reservations = data.reservations;
         console.log('Fetched reservations:', reservations);
@@ -23,22 +26,39 @@ const BookingsPage = () => {
         const listings = await Promise.all(
           reservations.map(async (booking) => {
             try {
-              const res = await axiosInstance.get(`/listings/${booking.listing_id}`);
+              // Extract listing_id using the same pattern as FavoritesPage
+              const listingId = booking.listing_id?.listing_id || booking.listing_id?._id || booking.listing_id;
+              
+              // Validate that we have a proper numeric listing_id
+              let validListingId = null;
+              if (typeof listingId === 'number' && listingId > 0) {
+                validListingId = listingId;
+              } else if (typeof listingId === 'string' && listingId.trim() !== '' && !isNaN(Number(listingId))) {
+                validListingId = Number(listingId);
+              }
+              
+              if (!validListingId) {
+                console.warn(`Invalid listing_id for booking ${booking._id}:`, listingId);
+                return null;
+              }
+              
+              console.log(`Fetching listing for valid ID: ${validListingId}`);
+              const res = await axiosInstance.get(`/listings/${validListingId}`);
               const listing = res.data;
               
               // Try to fetch images for each listing
               let images = [];
               try {
-                const imageRes = await axiosInstance.get(`/images/${booking.listing_id}`);
-                console.log(`Images for listing ${booking.listing_id}:`, imageRes.data);
+                const imageRes = await axiosInstance.get(`/images/${validListingId}`);
+                console.log(`Images for listing ${validListingId}:`, imageRes.data);
                 images = Array.isArray(imageRes.data) 
                   ? imageRes.data.map(img => img.url || img)
                   : [];
               } catch (imgErr) {
-                console.log(`Failed to fetch images for listing ${booking.listing_id}:`, imgErr.response?.status);
+                console.log(`Failed to fetch images for listing ${validListingId}:`, imgErr.response?.status);
                 // Try alternative endpoints
                 try {
-                  const altRes = await axiosInstance.get(`/listings/${booking.listing_id}/images`);
+                  const altRes = await axiosInstance.get(`/listings/${validListingId}/images`);
                   images = altRes.data.images || altRes.data || [];
                 } catch (altErr) {
                   console.log('Alternative image endpoint also failed');
@@ -58,11 +78,14 @@ const BookingsPage = () => {
           })
         );
         
-        // Gắn thông tin phòng vào từng booking
-        const bookingsWithPlace = reservations.map((booking, idx) => ({
-          ...booking,
-          place: listings[idx],
-        }));
+        // Gắn thông tin phòng vào từng booking, only include bookings with valid listings
+        const bookingsWithPlace = reservations
+          .map((booking, idx) => ({
+            ...booking,
+            place: listings[idx],
+          }))
+          .filter(booking => booking.place !== null);
+        
         console.log('Final bookings with place data:', bookingsWithPlace);
         setBookings(bookingsWithPlace);
         setLoading(false);
