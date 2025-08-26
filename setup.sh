@@ -15,6 +15,23 @@ PORT_CLIENT=${PORT_CLIENT:-5173}
 
 print_header() { echo -e "\n==== $1 ====\n"; }
 
+export_and_update_env() {
+  local env_file=$1
+  local key=$2
+  local value=$3
+  
+  # Export to current shell
+  export "$key=$value"
+  echo "Exported $key=$value"
+  
+  # Update .env file
+  if ! grep -q "^$key=" "$env_file"; then
+    echo "$key=$value" >> "$env_file"
+  else
+    sed -i "s#^$key=.*#$key=$value#" "$env_file"
+  fi
+}
+
 create_env_file() {
   local file=$1
   local content=$2
@@ -41,8 +58,19 @@ ZALOPAY_KEY2=${ZALOPAY_KEY2:-trMrHtvjo6myautxDUiAcYsVtaeQ8nhf}
 ZALOPAY_ENDPOINT=${ZALOPAY_ENDPOINT:-https://sb-openapi.zalopay.vn/v2/create}
 "
 
-create_env_file "$CLIENT_DIR/.env" "VITE_API_URL=http://localhost:$PORT_API
+create_env_file "$CLIENT_DIR/.env" "VITE_BASE_URL=http://localhost:$PORT_API
 "
+
+# Export key environment variables to current shell
+print_header "Exporting environment variables to shell"
+if [[ -f "$API_DIR/.env" ]]; then
+  export $(grep -v '^#' "$API_DIR/.env" | grep -v '^$' | xargs)
+  echo "Exported backend environment variables"
+fi
+if [[ -f "$CLIENT_DIR/.env" ]]; then
+  export $(grep -v '^#' "$CLIENT_DIR/.env" | grep -v '^$' | xargs)
+  echo "Exported frontend environment variables"
+fi
 
 print_header "Installing dependencies (API)"
 (cd "$API_DIR" && npm install)
@@ -73,17 +101,9 @@ if command -v ngrok >/dev/null 2>&1; then
   PUBLIC_URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.ngrok-free\.app' ngrok.log | head -n1 || true)
   if [[ -n "$PUBLIC_URL" ]]; then
     echo "Discovered public tunnel: $PUBLIC_URL"
-    # Append / update API .env
-    if ! grep -q '^PUBLIC_TUNNEL_URL=' "$API_DIR/.env"; then
-      echo "PUBLIC_TUNNEL_URL=$PUBLIC_URL" >> "$API_DIR/.env"
-    else
-      sed -i "s#^PUBLIC_TUNNEL_URL=.*#PUBLIC_TUNNEL_URL=$PUBLIC_URL#" "$API_DIR/.env"
-    fi
-    if ! grep -q '^ZALOPAY_CALLBACK_URL=' "$API_DIR/.env"; then
-      echo "ZALOPAY_CALLBACK_URL=$PUBLIC_URL/payments/zalopay/callback" >> "$API_DIR/.env"
-    else
-      sed -i "s#^ZALOPAY_CALLBACK_URL=.*#ZALOPAY_CALLBACK_URL=$PUBLIC_URL/payments/zalopay/callback#" "$API_DIR/.env"
-    fi
+    # Export and update .env files
+    export_and_update_env "$API_DIR/.env" "PUBLIC_TUNNEL_URL" "$PUBLIC_URL"
+    export_and_update_env "$API_DIR/.env" "ZALOPAY_CALLBACK_URL" "$PUBLIC_URL/payments/zalopay/callback"
   else
     echo "Could not determine ngrok public URL yet. Check ngrok.log"
   fi
