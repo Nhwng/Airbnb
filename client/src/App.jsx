@@ -22,6 +22,7 @@ import axiosInstance from './utils/axios';
 import { UserProvider } from './providers/UserProvider';
 import { ListingProvider } from './providers/ListingProvider';  // Cập nhật từ PlaceProvider thành ListingProvider
 import { AmenityProvider } from './providers/AmenityProvider';  // Thêm mới provider cho Amenity
+import { DataCacheProvider } from './contexts/DataCacheContext';
 //import { AvailabilityProvider } from './providers/AvailabilityProvider';  // Thêm mới provider cho Availability
 //import { ImageProvider } from './providers/ImageProvider';  // Thêm mới provider cho Image
 //import { ReviewProvider } from './providers/ReviewProvider';  // Thêm mới provider cho Review
@@ -43,9 +44,10 @@ function App() {
 
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <UserProvider>
-        <ListingProvider>  {/* Cập nhật từ PlaceProvider thành ListingProvider */}
-          <AmenityProvider>  {/* Thêm provider cho Amenity */}
+      <DataCacheProvider>
+        <UserProvider>
+          <ListingProvider>  {/* Cập nhật từ PlaceProvider thành ListingProvider */}
+            <AmenityProvider>  {/* Thêm provider cho Amenity */}
             {/* <AvailabilityProvider>  {/* Thêm provider cho Availability */}
               {/* <ImageProvider>  {/* Thêm provider cho Image */}
                 {/* <ReviewProvider>  {/* Thêm provider cho Review */}
@@ -80,9 +82,10 @@ function App() {
                 {/* </ReviewProvider> */}
               {/* </ImageProvider> */}
             {/* </AvailabilityProvider> */}
-          </AmenityProvider>
-        </ListingProvider>
-      </UserProvider>
+            </AmenityProvider>
+          </ListingProvider>
+        </UserProvider>
+      </DataCacheProvider>
     </GoogleOAuthProvider>
   );
 }

@@ -4,13 +4,26 @@ const Favorite = require('../models/Favorite');
 const Listing = require('../models/Listing');
 const { isLoggedIn } = require('../middlewares/user');
 
-// Get user's favorite listings
+// Get user's favorite listings with pagination and images
 router.get('/', isLoggedIn, async (req, res) => {
   try {
     const { user_id } = req.user;
     
-    // Get favorites
-    const favorites = await Favorite.find({ user_id }).sort({ createdAt: -1 });
+    // Extract pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+    const includeImages = req.query.include_images === 'true';
+
+    // Get total count for pagination
+    const totalCount = await Favorite.countDocuments({ user_id });
+    const totalPages = Math.ceil(totalCount / limit);
+    
+    // Get favorites with pagination
+    const favorites = await Favorite.find({ user_id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     
     // Get listing IDs from favorites
     const listingIds = favorites.map(fav => fav.listing_id);
@@ -18,19 +31,46 @@ router.get('/', isLoggedIn, async (req, res) => {
     // Fetch listings separately
     const listings = await Listing.find({ listing_id: { $in: listingIds } });
     
+    // If images requested, fetch them in single batch query
+    let imagesByListing = {};
+    if (includeImages && listingIds.length > 0) {
+      const Image = require('../models/Image');
+      const images = await Image.find({ 
+        listing_id: { $in: listingIds } 
+      }).select('listing_id url');
+      
+      // Group images by listing_id
+      imagesByListing = images.reduce((acc, img) => {
+        if (!acc[img.listing_id]) acc[img.listing_id] = [];
+        acc[img.listing_id].push(img.url);
+        return acc;
+      }, {});
+    }
+    
     // Map listings to favorites
     const favoritesWithListings = favorites.map(favorite => {
       const listing = listings.find(l => l.listing_id === favorite.listing_id);
+      if (!listing) return null;
+      
       return {
         ...favorite.toObject(),
-        listing_id: listing || null
+        listing_id: listing,
+        listing_images: imagesByListing[favorite.listing_id] || []
       };
-    }).filter(fav => fav.listing_id); // Filter out favorites where listing was deleted
+    }).filter(Boolean); // Filter out favorites where listing was deleted
     
     res.status(200).json({
       success: true,
       count: favoritesWithListings.length,
-      favorites: favoritesWithListings
+      favorites: favoritesWithListings,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit
+      }
     });
   } catch (error) {
     console.error('Error fetching favorites:', error);

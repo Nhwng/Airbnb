@@ -1,6 +1,7 @@
 // src/pages/IndexPage.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useListings } from '../../hooks';
+import { useDataCache } from '../contexts/DataCacheContext';
 import axiosInstance from '@/utils/axios';
 
 import Spinner from '@/components/ui/Spinner';
@@ -77,12 +78,20 @@ const CitySection = ({ cityName, listings }) => {
 const IndexPage = () => {
   // Global listings context
   const { listings, setLoading, setListings } = useListings();
+  
+  // Data cache context
+  const { 
+    getHomepageData, 
+    getCachedCityListings, 
+    getCachedHomeTypeListings,
+    getCacheStats 
+  } = useDataCache();
 
   // Page state
   const [initialLoad, setInitialLoad] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
 
-  // Homepage sections data
+  // Homepage sections data (now loaded from cache)
   const [homeTypes, setHomeTypes] = useState([]); // top 3
   const [homeTypeListings, setHomeTypeListings] = useState({});
   const [cityListings, setCityListings] = useState([]);
@@ -120,92 +129,51 @@ const IndexPage = () => {
   const handleCityClick = useCallback(
     (cityName) => {
       runSearchAndShow(async () => {
-        const { data } = await axiosInstance.get(
-          `/listings/search?city=${encodeURIComponent(cityName)}&limit=12&withImages=true`
-        );
-        return data;
+        console.log(`🏙️ Fetching city listings for: ${cityName}`);
+        return getCachedCityListings(cityName, 12);
       });
     },
-    [runSearchAndShow]
+    [runSearchAndShow, getCachedCityListings]
   );
 
   const handleTypeClick = useCallback(
     (typeName, subtypeName) => {
       runSearchAndShow(async () => {
-        const params = new URLSearchParams({ homeType: typeName, limit: '12' });
-        if (subtypeName) params.append('subtype', subtypeName);
-
-        // Prefer /by-home-type; fallback to /search
-        try {
-          const { data } = await axiosInstance.get(`/listings/by-home-type?${params.toString()}`);
-          return data;
-        } catch (e) {
-          console.warn('by-home-type failed, fallback to /listings/search', e);
-          const searchParams = new URLSearchParams({
-            withImages: 'true',
-            limit: '12',
-            homeType: typeName,
-          });
-          if (subtypeName) searchParams.append('subtype', subtypeName);
-          const { data } = await axiosInstance.get(`/listings/search?${searchParams.toString()}`);
-          return data;
-        }
+        console.log(`🏠 Fetching home type listings for: ${typeName}${subtypeName ? ` - ${subtypeName}` : ''}`);
+        return getCachedHomeTypeListings(typeName, subtypeName, 12);
       });
     },
-    [runSearchAndShow]
+    [runSearchAndShow, getCachedHomeTypeListings]
   );
 
-  // ===== Load homepage data + full catalog =====
+  // ===== Load homepage data + full catalog with caching =====
   const loadHomepageData = useCallback(async () => {
     if (!initialLoad) return;
+    
     setCatalogLoading(true);
+    console.log('🚀 Loading homepage data...');
+    console.log('📊 Cache stats:', getCacheStats());
+    
     try {
-      // Catalog
-      const { data: catalogData } = await axiosInstance.get('/listings/catalog');
-      const { homeTypes: allHomeTypes = [], cities = [] } = catalogData || {};
-      setCatalog({ cities, homeTypes: allHomeTypes });
-
-      // Top 3 home types for sections
-      const selectedHomeTypes = allHomeTypes.slice(0, 3);
+      // Get all homepage data from cache (single function call!)
+      const homepageData = await getHomepageData();
+      
+      const { catalog, selectedHomeTypes, homeTypeListings, cityListings } = homepageData;
+      
+      // Update state with cached data
+      setCatalog(catalog);
       setHomeTypes(selectedHomeTypes);
-
-      // Listings per selected home type
-      const htMap = {};
-      for (const ht of selectedHomeTypes) {
-        try {
-          const { data: byType } = await axiosInstance.get(
-            `/listings/by-home-type?homeType=${encodeURIComponent(ht.name)}&limit=4`
-          );
-          htMap[ht.name] = (byType || []).map((l) => ({
-            ...l,
-            images: l.firstImage ? [l.firstImage] : [],
-          }));
-        } catch (err) {
-          console.error(`Error loading listings for ${ht.name}:`, err);
-          htMap[ht.name] = [];
-        }
-      }
-      setHomeTypeListings(htMap);
-
-      // Featured city: Ho Chi Minh City
-      try {
-        const { data: hcm } = await axiosInstance.get(
-          '/listings/search?city=Ho%20Chi%20Minh%20City&limit=4&withImages=true'
-        );
-        setCityListings(
-          (hcm || []).map((l) => ({ ...l, images: l.firstImage ? [l.firstImage] : [] }))
-        );
-      } catch (err) {
-        console.error('Error loading HCMC listings:', err);
-        setCityListings([]);
-      }
+      setHomeTypeListings(homeTypeListings);
+      setCityListings(cityListings);
+      
+      console.log('✅ Homepage data loaded successfully from cache!');
     } catch (err) {
-      console.error('Error loading homepage data:', err);
+      console.error('❌ Error loading homepage data:', err);
     } finally {
       setCatalogLoading(false);
       setInitialLoad(false);
     }
-  }, [initialLoad]);
+  }, [initialLoad, getHomepageData, getCacheStats]);
 
   // ===== SearchBar handler =====
   const handleSearch = useCallback(

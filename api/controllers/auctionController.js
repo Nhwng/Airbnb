@@ -413,6 +413,156 @@ exports.updateAuctionRequestStatus = async (req, res) => {
   }
 };
 
+// Get all auctions with filtering, pagination, and sorting
+exports.getAllAuctions = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 12, 
+      status = 'active', 
+      sortBy = 'ending_soon', 
+      search = '' 
+    } = req.query;
+
+    // Build query based on status filter
+    let query = {};
+    const now = new Date();
+
+    switch (status) {
+      case 'active':
+        query = {
+          status: 'active',
+          auction_end: { $gt: now }
+        };
+        break;
+      case 'ended':
+        query = {
+          $or: [
+            { status: 'ended' },
+            { auction_end: { $lte: now } }
+          ]
+        };
+        break;
+      case 'all':
+        // No additional filters
+        break;
+      default:
+        query = {
+          status: 'active',
+          auction_end: { $gt: now }
+        };
+    }
+
+    // Add search functionality if search query provided
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      // We'll search in listing details after population
+      // For now, let's get all auctions and filter later
+    }
+
+    // Determine sort order
+    let sortQuery = {};
+    switch (sortBy) {
+      case 'ending_soon':
+        sortQuery = { auction_end: 1 }; // Ascending - ending soonest first
+        break;
+      case 'newest':
+        sortQuery = { created_at: -1 }; // Descending - newest first
+        break;
+      case 'price_low':
+        sortQuery = { current_bid: 1 }; // Ascending - lowest price first
+        break;
+      case 'price_high':
+        sortQuery = { current_bid: -1 }; // Descending - highest price first
+        break;
+      default:
+        sortQuery = { auction_end: 1 };
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get total count for pagination
+    const totalCount = await Auction.countDocuments(query);
+
+    // Get auctions with pagination
+    const auctions = await Auction.find(query)
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Populate listing and host information
+    const populatedAuctions = await Promise.all(
+      auctions.map(async (auction) => {
+        const listing = await Listing.findOne({ listing_id: auction.listing_id });
+        const host = await User.findOne({ user_id: auction.host_id });
+        const firstImage = await Image.findOne({ listing_id: auction.listing_id });
+        const bidCount = await Bid.countDocuments({ auction_id: auction._id });
+
+        // Apply search filter to populated data if search query exists
+        if (search && search.trim()) {
+          const searchLower = search.toLowerCase().trim();
+          const title = listing?.title?.toLowerCase() || '';
+          const city = listing?.city?.toLowerCase() || '';
+          const description = listing?.description?.toLowerCase() || '';
+          
+          if (!title.includes(searchLower) && 
+              !city.includes(searchLower) && 
+              !description.includes(searchLower)) {
+            return null; // Filter out non-matching results
+          }
+        }
+
+        return {
+          ...auction.toObject(),
+          listing: {
+            listing_id: listing?.listing_id,
+            title: listing?.title || 'Unknown',
+            description: listing?.description || '',
+            city: listing?.city || 'Unknown',
+            person_capacity: listing?.person_capacity || 1,
+            room_type: listing?.room_type || 'Unknown',
+            firstImage: firstImage || null
+          },
+          host: {
+            name: host?.name || 'Unknown'
+          },
+          bid_count: bidCount,
+          time_remaining: auction.auction_end - now
+        };
+      })
+    );
+
+    // Filter out null results from search
+    const filteredAuctions = populatedAuctions.filter(auction => auction !== null);
+
+    // Recalculate pagination info if search filtering was applied
+    const actualTotal = search && search.trim() ? filteredAuctions.length : totalCount;
+    const totalPages = Math.ceil(actualTotal / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+
+    res.status(200).json({
+      auctions: filteredAuctions,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalCount: actualTotal,
+        hasNextPage,
+        hasPrevPage,
+        limit: parseInt(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get all auctions error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
 // Get active auctions for users
 exports.getActiveAuctions = async (req, res) => {
   try {

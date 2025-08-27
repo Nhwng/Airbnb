@@ -1,73 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MapPin, Users, Home, Star } from 'lucide-react';
+import { Heart, MapPin, Users, Home, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
 import { formatVND } from '@/utils';
 import { useAuth } from '../../hooks';
+import { useDataCache } from '../contexts/DataCacheContext';
 import AccountNav from '@/components/ui/AccountNav';
 import Spinner from '@/components/ui/Spinner';
 
 const FavoritesPage = () => {
   const { user } = useAuth();
+  const { getCachedFavorites, invalidateFavoritesCache } = useDataCache();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 12
+  });
+
+  const fetchFavorites = async (page = 1, limit = 12) => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('FavoritesPage: Fetching cached favorites...');
+      
+      // Use cached API call
+      const data = await getCachedFavorites(page, limit);
+      
+      console.log('Fetched cached favorites:', data);
+      
+      // Transform the already optimized data
+      const optimizedFavorites = data.favorites.map(favorite => ({
+        ...favorite,
+        images: favorite.listing_images || []
+      }));
+      
+      setFavorites(optimizedFavorites);
+      setPagination(data.pagination || pagination);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching favorites:', err);
+      setError('Failed to load your favorites');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFavorites = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data } = await axiosInstance.get('/favorites');
-        
-        // Fetch images for each favorite listing
-        const favoritesWithImages = await Promise.all(
-          data.favorites.map(async (favorite) => {
-            try {
-              // Try different possible image endpoints
-              let imageRes;
-              const listingId = favorite.listing_id.listing_id || favorite.listing_id._id || favorite.listing_id;
-              
-              try {
-                imageRes = await axiosInstance.get(`/images/${listingId}`);
-              } catch (err) {
-                // Try alternative endpoint if first fails
-                imageRes = await axiosInstance.get(`/listings/${listingId}/images`);
-              }
-              
-              return {
-                ...favorite,
-                images: imageRes.data || imageRes.data.images || []
-              };
-            } catch (err) {
-              console.log('Error fetching images for listing:', favorite.listing_id, err);
-              return {
-                ...favorite,
-                images: []
-              };
-            }
-          })
-        );
-        
-        setFavorites(favoritesWithImages);
-      } catch (err) {
-        console.error('Error fetching favorites:', err);
-        setError('Failed to load your favorites');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchFavorites();
   }, [user]);
+
+  const handlePageChange = (newPage) => {
+    fetchFavorites(newPage, pagination.limit);
+  };
 
   const handleRemoveFromFavorites = async (listingId) => {
     try {
       await axiosInstance.delete(`/favorites/${listingId}`);
-      setFavorites(prev => prev.filter(fav => fav.listing_id.listing_id !== listingId));
+      // Invalidate favorites cache to force fresh data
+      invalidateFavoritesCache();
+      // Refresh current page to show updated data and correct pagination
+      fetchFavorites(pagination.currentPage, pagination.limit);
     } catch (err) {
       console.error('Error removing from favorites:', err);
     }
@@ -280,6 +282,63 @@ const FavoritesPage = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex justify-center items-center space-x-4">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                pagination.hasPrevPage
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                const isActive = pageNum === pagination.currentPage;
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                      isActive
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                pagination.hasNextPage
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+            
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.currentPage - 1) * pagination.limit) + 1}-
+              {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} favorites
+            </div>
           </div>
         )}
       </div>

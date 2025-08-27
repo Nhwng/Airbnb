@@ -8,6 +8,7 @@ const {
   getPendingAuctionRequests,
   updateAuctionRequestStatus,
   getActiveAuctions,
+  getAllAuctions,
   placeBid,
   getAuctionDetails,
   buyoutAuction,
@@ -25,7 +26,8 @@ router.route('/admin/pending').get(isLoggedIn, getPendingAuctionRequests);
 router.route('/admin/request/:requestId').put(isLoggedIn, updateAuctionRequestStatus);
 
 // Public routes for viewing auctions
-router.route('/active').get(getActiveAuctions);
+router.route('/').get(getAllAuctions); // General auction list with filtering/pagination
+router.route('/active').get(getActiveAuctions); // Legacy active auctions endpoint
 router.route('/:auctionId').get(getAuctionDetails);
 
 // SSE (Server-Sent Events) routes for real-time updates

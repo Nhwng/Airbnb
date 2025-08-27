@@ -5,10 +5,12 @@ import { Calendar, MapPin, Users, CreditCard, Home, Plane, ChevronLeft, ChevronR
 import AccountNav from '@/components/ui/AccountNav';
 import PlaceImg from '@/components/ui/PlaceImg';
 import Spinner from '@/components/ui/Spinner';
+import { useDataCache } from '../contexts/DataCacheContext';
 import axiosInstance from '@/utils/axios';
 import { formatVND } from '@/utils';
 
 const BookingsPage = () => {
+  const { getCachedReservations } = useDataCache();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -22,15 +24,15 @@ const BookingsPage = () => {
 
   const fetchBookings = async (page = 1, limit = 10) => {
     try {
-      console.log('BookingsPage: Starting to fetch reservations...');
+      console.log('BookingsPage: Starting to fetch cached reservations...');
       console.log('BookingsPage: Token in localStorage:', localStorage.getItem('token') ? 'Present' : 'Missing');
       
       setLoading(true);
       
-      // Single optimized API call with pagination and populated data
-      const { data } = await axiosInstance.get(`/reservations?page=${page}&limit=${limit}&include_images=true`);
+      // Use cached API call
+      const data = await getCachedReservations(page, limit);
       
-      console.log('Fetched optimized reservations:', data);
+      console.log('Fetched cached reservations:', data);
       
       // Transform the already populated data
       const bookingsWithPlace = data.reservations
@@ -51,7 +53,7 @@ const BookingsPage = () => {
           }
         }));
       
-      console.log('Final optimized bookings:', bookingsWithPlace);
+      console.log('Final cached bookings:', bookingsWithPlace);
       setBookings(bookingsWithPlace);
       setPagination(data.pagination || pagination);
       setLoading(false);

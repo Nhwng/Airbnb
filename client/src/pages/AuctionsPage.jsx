@@ -2,323 +2,76 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Gavel, 
-  Clock, 
-  MapPin, 
-  Users, 
-  TrendingUp, 
-  Timer,
-  Eye,
-  ChevronDown,
+  Search,
+  Filter,
+  SortDesc,
+  ChevronLeft,
+  ChevronRight,
   AlertCircle,
-  Info
+  TrendingUp,
+  Clock,
+  Info,
+  Eye
 } from 'lucide-react';
 import axiosInstance from '@/utils/axios';
 import { formatVND } from '@/utils'; 
 import Spinner from '@/components/ui/Spinner';
+import AuctionCard from '@/components/ui/AuctionCard';
+import { useDataCache } from '../contexts/DataCacheContext';
 import { useAuth } from '../../hooks';
 
-const AuctionCard = ({ auction }) => {
-  const { user } = useAuth();
-  const [timeRemaining, setTimeRemaining] = useState(null);
-
-  useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const endTime = new Date(auction.auction_end).getTime();
-      const difference = endTime - now;
-      
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-        
-        setTimeRemaining({ days, hours, minutes });
-      } else {
-        setTimeRemaining(null);
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 60000); // Update every minute
-    
-    return () => clearInterval(interval);
-  }, [auction.auction_end]);
-
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const getTimeRemainingText = () => {
-    if (!timeRemaining) return 'Auction ended';
-    
-    const { days, hours, minutes } = timeRemaining;
-    if (days > 0) return `${days}d ${hours}h left`;
-    if (hours > 0) return `${hours}h ${minutes}m left`;
-    return `${minutes}m left`;
-  };
-
-  const isAuctionActive = timeRemaining !== null;
-
-  const getDaysRemaining = () => {
-    if (!timeRemaining) return 0;
-    return timeRemaining.days || 0;
-  };
-
-  const getTotalNights = () => {
-    return auction.total_nights || 'N/A';
-  };
-
-  return (
-    <Link 
-      to={`/auctions/${auction._id}`}
-      className="block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-    >
-      {/* Property Image - Clean without overlapping badges */}
-      <div className="relative">
-        {auction.listing?.firstImage && (
-          <img 
-            src={auction.listing.firstImage.url}
-            alt={auction.listing.title}
-            className="w-full h-48 object-cover"
-          />
-        )}
-        {/* Subtle gradient overlay for better transition */}
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/10 to-transparent"></div>
-      </div>
-
-      {/* Card Content */}
-      <div className="p-5">
-        {/* Status Header - Clear separation from image */}
-        <div className="flex items-center justify-between mb-4">
-          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold ${
-            isAuctionActive 
-              ? 'bg-green-500 text-white' 
-              : 'bg-red-500 text-white'
-          }`}>
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              isAuctionActive ? 'bg-white animate-pulse' : 'bg-gray-200'
-            }`}></div>
-            {isAuctionActive ? 'LIVE AUCTION' : 'AUCTION ENDED'}
-          </div>
-          
-          {/* Enhanced Days Left Display */}
-          {getDaysRemaining() > 0 ? (
-            <div className="bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-lg">
-              <div className="flex items-center text-blue-800">
-                <Clock className="w-3 h-3 mr-1" />
-                <span className="text-xs font-bold">
-                  {getDaysRemaining()}
-                </span>
-                <span className="text-xs font-medium ml-1">
-                  day{getDaysRemaining() !== 1 ? 's' : ''} left
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-red-100 border border-red-300 px-3 py-1.5 rounded-lg">
-              <div className="flex items-center text-red-800">
-                <Timer className="w-3 h-3 mr-1" />
-                <span className="text-xs font-medium">
-                  {getTimeRemainingText()}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Property Header */}
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
-            {auction.listing?.title}
-          </h3>
-          <div className="flex items-center text-gray-500 text-sm mb-3">
-            <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-            <span className="truncate">{auction.listing?.city}</span>
-            <span className="mx-2">•</span>
-            <Users className="w-4 h-4 mr-1 flex-shrink-0" />
-            <span>{auction.listing?.person_capacity} guests</span>
-          </div>
-        </div>
-
-        {/* Stay Information */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mb-4">
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="text-center">
-              <span className="text-purple-600 font-medium block mb-1">Stay Duration</span>
-              <div className="text-lg font-bold text-purple-900">
-                {getTotalNights()}
-              </div>
-              <div className="text-purple-600">nights</div>
-            </div>
-            <div className="text-center">
-              <span className="text-green-600 font-medium block mb-1">Check-in</span>
-              <div className="text-sm font-semibold text-green-900">
-                {auction.check_in_date ? formatDate(auction.check_in_date) : 'TBD'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pricing Section */}
-        <div className="space-y-3 mb-4">
-          {/* Current Bid - Prominent */}
-          <div className="bg-rose-50 border-l-4 border-rose-400 rounded-r-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-rose-600 font-medium mb-1">CURRENT BID</div>
-                <div className="text-xl font-bold text-rose-900">{formatVND(auction.current_bid)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-rose-600">{auction.bid_count || 0} bids</div>
-                <TrendingUp className="w-5 h-5 text-rose-500 mt-1 ml-auto" />
-              </div>
-            </div>
-          </div>
-
-          {/* Price Comparison */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-2 bg-gray-50 rounded-lg">
-              <div className="text-xs text-gray-500 mb-1">Starting</div>
-              <div className="text-sm font-semibold text-gray-400 line-through">
-                {formatVND(auction.starting_price)}
-              </div>
-            </div>
-            <div className="text-center p-2 bg-green-50 rounded-lg">
-              <div className="text-xs text-green-600 mb-1">Buyout</div>
-              <div className="text-sm font-bold text-green-700">
-                {formatVND(auction.buyout_price)}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          {/* Primary Actions for Active Auctions */}
-          {user && isAuctionActive ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                to={`/auctions/${auction._id}/bid`}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center justify-center px-4 py-2.5 bg-rose-600 text-white text-sm font-semibold rounded-lg hover:bg-rose-700 transition-colors"
-              >
-                <Gavel className="w-4 h-4 mr-1.5" />
-                Place Bid
-              </Link>
-              <Link
-                to={`/auctions/${auction._id}/buyout`}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center justify-center px-4 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Buy Now
-              </Link>
-            </div>
-          ) : (
-            <div className="text-center">
-              {!user && (
-                <div className="text-xs text-gray-500 mb-2">Login required to bid</div>
-              )}
-              {!isAuctionActive && (
-                <div className="text-xs text-gray-500 mb-2">Auction has ended</div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-};
-
+// Modal component for auction rules
 const AuctionRulesModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Auction and Rental Rules</h2>
-            <button
+            <h3 className="text-xl font-semibold text-gray-900">Auction Rules & Guidelines</h3>
+            <button 
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              ✕
+              <span className="sr-only">Close</span>
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
             </button>
           </div>
-          
-          <div className="space-y-6 text-sm text-gray-700">
+          <div className="space-y-4 text-gray-600">
             <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">1. Classification of Rental Types</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Direct Rental (Next 2 Weeks):</h4>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
-                    <li>Available for bookings from today up to 14 days ahead</li>
-                    <li>Instant booking at standard room prices</li>
-                    <li>Fixed pricing with immediate confirmation</li>
-                    <li>No auction required for these dates</li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Auction Rental (Day 15 Onwards):</h4>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700 ml-4">
-                    <li>Required for all bookings starting from day 15 onwards</li>
-                    <li>Competitive bidding system with starting price</li>
-                    <li>Buyout option available for immediate booking</li>
-                    <li>Highest bidder wins when auction ends</li>
-                    <li>2-week auction period before accommodation dates</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">2. Auction Rules</h3>
-              <ul className="list-disc list-inside space-y-2 text-gray-700">
-                <li>All bids are binding and cannot be retracted</li>
-                <li>Each new bid must be higher than the current highest bid</li>
-                <li>Minimum bid increment is 10,000₫</li>
-                <li><strong>Buyout option:</strong> Pay the buyout price to win immediately</li>
-                <li>Auction ends when buyout is used or time expires</li>
-                <li>Winner must complete payment within 24 hours</li>
-                <li>Failed payments result in offer going to second-highest bidder</li>
-                <li>No refunds once auction is won (except host cancellation)</li>
+              <h4 className="font-medium text-gray-900 mb-2">🎯 How Auctions Work</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• Bid on exclusive accommodations for dates 15+ days in advance</li>
+                <li>• Highest bidder wins when the auction ends</li>
+                <li>• Use "Buyout" price for immediate purchase</li>
               </ul>
             </div>
-
             <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">3. Payment and Booking</h3>
-              <ul className="list-disc list-inside space-y-2 text-gray-700">
-                <li>Payment must be completed within 24 hours of winning auction</li>
-                <li>Accepted payment methods: ZaloPay, bank transfer</li>
-                <li>Booking confirmation sent after successful payment</li>
-                <li>Check-in details provided 48 hours before accommodation date</li>
+              <h4 className="font-medium text-gray-900 mb-2">⚡ Bidding Rules</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• Minimum bid increment: ₫10,000</li>
+                <li>• No bid withdrawal once placed</li>
+                <li>• Payment required within 24 hours of winning</li>
               </ul>
             </div>
-
             <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">4. Cancellation Policy</h3>
-              <ul className="list-disc list-inside space-y-2 text-gray-700">
-                <li>Host cancellations: Full refund + 25% compensation</li>
-                <li>Guest cancellations after winning auction: No refund</li>
-                <li>Force majeure events will be handled case by case</li>
+              <h4 className="font-medium text-gray-900 mb-2">🔒 Safety & Security</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• All properties are verified and approved</li>
+                <li>• Secure payment processing</li>
+                <li>• Full refund if host cancels</li>
               </ul>
             </div>
           </div>
-
-          <div className="mt-6 pt-4 border-t">
-            <button
+          <div className="mt-6 flex justify-end">
+            <button 
               onClick={onClose}
-              className="w-full px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium"
+              className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
             >
-              I Understand the Rules
+              Got it!
             </button>
           </div>
         </div>
@@ -329,66 +82,106 @@ const AuctionRulesModal = ({ isOpen, onClose }) => {
 
 const AuctionsPage = () => {
   const { user } = useAuth();
+  const { getCachedAuctions } = useDataCache();
+  
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showRules, setShowRules] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 12
+  });
 
-  const fetchActiveAuctions = async () => {
+  // Filter and sort options
+  const [filters, setFilters] = useState({
+    status: 'active', // active, ended, all
+    sortBy: 'ending_soon', // ending_soon, newest, price_low, price_high
+    searchQuery: ''
+  });
+
+  const fetchAuctions = async (page = 1, limit = 12) => {
     try {
       setLoading(true);
-      const { data } = await axiosInstance.get('/auctions/active');
-      setAuctions(data);
+      console.log('AuctionsPage: Fetching cached auctions...');
+      
+      // Use cached data with filters
+      const data = await getCachedAuctions(page, limit, filters);
+      
+      console.log('Fetched cached auctions:', data);
+      
+      setAuctions(data.auctions || []);
+      setPagination(data.pagination || pagination);
     } catch (error) {
       console.error('Error fetching auctions:', error);
-      alert('Failed to fetch auctions');
+      setAuctions([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchActiveAuctions();
-  }, []);
+    fetchAuctions();
+  }, [filters]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <Spinner />
-      </div>
-    );
+  const handlePageChange = (newPage) => {
+    fetchAuctions(newPage, pagination.limit);
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchAuctions(1, pagination.limit);
+  };
+
+  // Statistics
+  const activeAuctions = auctions.filter(a => {
+    const now = new Date();
+    const endTime = new Date(a.auction_end);
+    return endTime > now;
+  }).length;
+
+  const totalBids = auctions.reduce((sum, auction) => sum + (auction.bid_count || 0), 0);
+
+  if (loading && auctions.length === 0) {
+    return <Spinner />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-rose-500 to-pink-600 text-white">
+      <div className="bg-gradient-to-br from-rose-500 to-orange-600 text-white pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Gavel className="w-12 h-12 mr-4" />
-              <h1 className="text-4xl md:text-5xl font-bold">Live Auctions</h1>
+              <Gavel className="w-12 h-12 mr-3" />
+              <h1 className="text-4xl md:text-5xl font-bold">Auction Marketplace</h1>
             </div>
-            <p className="text-xl md:text-2xl text-rose-100 max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-rose-100 max-w-2xl mx-auto mb-8">
               Bid on exclusive accommodations and win amazing stays at competitive prices
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              {!user && (
-                <div className="bg-rose-600 bg-opacity-50 border border-rose-400 rounded-lg p-4 max-w-md">
-                  <div className="flex items-center text-rose-100">
-                    <AlertCircle className="w-5 h-5 mr-2" />
-                    <span className="text-sm">Please login to place bids on auctions</span>
-                  </div>
-                </div>
-              )}
-              
-              <button
-                onClick={() => setShowRules(true)}
-                className="inline-flex items-center px-6 py-3 bg-white text-rose-600 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-              >
-                <Info className="w-5 h-5 mr-2" />
-                View Auction Rules
-              </button>
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="text-2xl font-bold">{activeAuctions}</div>
+                <div className="text-rose-100">Active Auctions</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="text-2xl font-bold">{totalBids}</div>
+                <div className="text-rose-100">Total Bids</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                <div className="text-2xl font-bold">{auctions.length}</div>
+                <div className="text-rose-100">Properties</div>
+              </div>
             </div>
           </div>
         </div>
@@ -396,35 +189,210 @@ const AuctionsPage = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+        {/* Search & Filter Bar */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 mb-8">
+          <form onSubmit={handleSearch} className="p-6">
+            <div className="flex flex-col xl:flex-row gap-4 items-end">
+              {/* Search Input */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Search className="inline w-4 h-4 mr-1" />
+                  Search Auctions
+                </label>
+                <div className="relative">
+                  <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by title, city, or description..."
+                    value={filters.searchQuery}
+                    onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 placeholder-gray-500"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex-1 max-w-xs">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Filter className="inline w-4 h-4 mr-1" />
+                  Status
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white"
+                >
+                  <option value="active">Active Auctions</option>
+                  <option value="ended">Ended Auctions</option>
+                  <option value="all">All Auctions</option>
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div className="flex-1 max-w-xs">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <SortDesc className="inline w-4 h-4 mr-1" />
+                  Sort By
+                </label>
+                <select
+                  value={filters.sortBy}
+                  onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white"
+                >
+                  <option value="ending_soon">Ending Soon</option>
+                  <option value="newest">Newest First</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                </select>
+              </div>
+
+              {/* Search Button */}
+              <div className="flex-shrink-0 flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="w-12 h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                  aria-label="Search auctions"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+                
+                {/* Rules Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowRules(true)}
+                  className="w-12 h-12 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center transition-colors"
+                  title="View Auction Rules"
+                  aria-label="View auction rules"
+                >
+                  <Info className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Help Text */}
+            <p className="text-xs text-gray-500 mt-4">
+              Search across auction titles, property descriptions, and locations. Use filters to narrow down results.
+            </p>
+          </form>
+        </div>
+
+        {/* Results Header */}
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Active Auctions</h2>
-            <p className="text-gray-600">{auctions.length} auctions currently active</p>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {filters.status === 'active' ? 'Active Auctions' : 
+               filters.status === 'ended' ? 'Ended Auctions' : 
+               'All Auctions'}
+            </h2>
+            <p className="text-gray-600">
+              {loading ? 'Loading...' : `${pagination.totalCount} auctions found`}
+            </p>
           </div>
+
           <button
-            onClick={fetchActiveAuctions}
+            onClick={() => fetchAuctions(pagination.currentPage, pagination.limit)}
             className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={loading}
           >
             <Clock className="w-4 h-4 mr-2" />
-            Refresh
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
+        {/* Auctions Grid */}
         {auctions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-            {auctions.map((auction) => (
-              <AuctionCard key={auction._id} auction={auction} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {auctions.map((auction) => (
+                <AuctionCard key={auction._id} auction={auction} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-4">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                    pagination.hasPrevPage
+                      ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </button>
+                
+                <div className="flex items-center space-x-2">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    const isActive = pageNum === pagination.currentPage;
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                          isActive
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                    pagination.hasNextPage
+                      ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </button>
+                
+                <div className="text-sm text-gray-600">
+                  Showing {((pagination.currentPage - 1) * pagination.limit) + 1}-
+                  {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} auctions
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 text-center py-16 px-6">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Gavel className="w-10 h-10 text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">No Active Auctions</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              {filters.status === 'active' ? 'No Active Auctions' : 
+               filters.status === 'ended' ? 'No Ended Auctions' : 
+               'No Auctions Found'}
+            </h3>
             <p className="text-gray-600 max-w-md mx-auto">
-              There are currently no active auctions. Check back later for new opportunities to bid on exclusive accommodations.
+              {filters.searchQuery ? 
+                `No auctions match "${filters.searchQuery}". Try adjusting your search terms.` :
+                'There are currently no auctions matching your criteria. Check back later for new opportunities.'
+              }
             </p>
+            {filters.searchQuery && (
+              <button
+                onClick={() => {
+                  handleFilterChange('searchQuery', '');
+                  handleFilterChange('status', 'active');
+                }}
+                className="mt-4 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
+              >
+                Clear Search
+              </button>
+            )}
           </div>
         )}
       </div>
